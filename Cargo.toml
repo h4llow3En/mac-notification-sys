@@ -1,0 +1,11 @@
+[package]
+name = "osx-test"
+version = "0.1.0"
+authors = ["h4llow3En <mail@felixdoering.com>"]
+build = "build.rs"
+
+[dependencies]
+objc-foundation = "0.1.1"
+
+[build-dependencies]
+gcc = "0.3.43"
