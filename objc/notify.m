@@ -1,5 +1,12 @@
 #import "notify.h"
 
+NSString *getBundleIdentifier(NSString *appName){
+  NSString *findString = [NSString stringWithFormat:@"get id of application \"%@\"", appName];
+  NSAppleScript *findScript = [[NSAppleScript alloc] initWithSource:findString];
+  NSAppleEventDescriptor *resultDescriptor = [findScript executeAndReturnError:nil];
+  return [resultDescriptor stringValue];
+}
+
 BOOL setApplication(NSString *newbundleIdentifier) {
   if(LSCopyApplicationURLsForBundleIdentifier((CFStringRef)newbundleIdentifier, NULL) != NULL){
     fakeBundleIdentifier = newbundleIdentifier;
