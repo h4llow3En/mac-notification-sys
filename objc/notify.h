@@ -1,12 +1,13 @@
 #import <Foundation/Foundation.h>
 #import <objc/runtime.h>
+#import <CoreServices/CoreServices.h>
 
 NSString *fakeBundleIdentifier = nil;
 
-@implementation NSBundle (swizle)
+@implementation NSBundle (swizzle)
 - (NSString *)__bundleIdentifier{
   if (self == [NSBundle mainBundle]) {
-    return fakeBundleIdentifier ? fakeBundleIdentifier : @"com.apple.terminal";
+    return fakeBundleIdentifier ? fakeBundleIdentifier : @"com.apple.Terminal";
   } else {
     return [self __bundleIdentifier];
   }

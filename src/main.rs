@@ -7,12 +7,12 @@ use objc_foundation::{NSString,INSString};
 #[link(name = "notify")]
 extern {
     fn sendNotification(title: *const NSString, message: *const NSString, sound: *const NSString);
-    fn setApplication(newbundleIdentifier: *const NSString);
+    fn setApplication(newbundleIdentifier: *const NSString) -> bool;
 }
 
 fn main() {
     unsafe {
-        setApplication(NSString::from_str("com.apple.safari").deref());
+        let _ = setApplication(NSString::from_str("com.apple.Trferminal").deref());
         sendNotification(NSString::from_str("Hello, world!").deref(), NSString::from_str("Message").deref(), NSString::from_str("Ping").deref());
     }
 }
