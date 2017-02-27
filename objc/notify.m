@@ -20,6 +20,7 @@ void scheduleNotification(NSString *title, NSString *message, NSString *sound, d
                 if (!installNSBundleHook()) {
                         return;
                 }
+                // NSDate *scheduleTime = [NSDate dateWithTimeIntervalSince1970:deliveryDate];
                 NSDate *scheduleTime = [NSDate dateWithTimeIntervalSinceNow:deliveryDate];
                 NSUserNotificationCenter *nc = [NSUserNotificationCenter defaultUserNotificationCenter];
                 NotificationCenterDelegate *ncDelegate = [[NotificationCenterDelegate alloc] init];

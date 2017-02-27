@@ -18,7 +18,7 @@ extern "C" {
 fn main() {
     unsafe {
         let application = getBundleIdentifier(NSString::from_str("Safari").deref());
-        let _ = setApplication(application);
+        let _ = setApplication(application); // Geht nur ein mal zu setzen
         sendNotification(NSString::from_str("Hello, world!").deref(),
                          NSString::from_str("Message").deref(),
                          NSString::from_str("Ping").deref());
