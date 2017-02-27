@@ -1,5 +1,4 @@
-//! A very thin wrapper to allow notifications on osx
-
+//! sound under /System/Library/Sounds
 #![allow(improper_ctypes)]
 #![allow(unused_imports)]
 

@@ -1,5 +1,5 @@
 [package]
-name = "osx-test"
+name = "macos_notifications"
 version = "0.1.0"
 authors = ["h4llow3En <mail@felixdoering.com>"]
 build = "build.rs"
