@@ -1,5 +1,6 @@
 #import "notify.h"
 
+/// getBundleIdentifier(app_name: &str) -> "de.hoodie.notify"
 NSString *getBundleIdentifier(NSString *appName){
         NSString *findString = [NSString stringWithFormat:@"get id of application \"%@\"", appName];
         NSAppleScript *findScript = [[NSAppleScript alloc] initWithSource:findString];
@@ -7,6 +8,7 @@ NSString *getBundleIdentifier(NSString *appName){
         return [resultDescriptor stringValue];
 }
 
+/// setApplication(new_bundle_identifier: &str) -> Result<()>
 BOOL setApplication(NSString *newbundleIdentifier) {
         if(LSCopyApplicationURLsForBundleIdentifier((CFStringRef)newbundleIdentifier, NULL) != NULL) {
                 fakeBundleIdentifier = newbundleIdentifier;
@@ -15,13 +17,14 @@ BOOL setApplication(NSString *newbundleIdentifier) {
         return NO;
 }
 
-void scheduleNotification(NSString *title, NSString *message, NSString *sound, double deliveryDate) {
+/// scheduleNotification(title: &str, message: &str, sound: &str, f64) -> Result<()>
+bool scheduleNotification(NSString *title, NSString *subtitle, NSString *message, NSString *sound, double deliveryDate) {
         @autoreleasepool {
                 if (!installNSBundleHook()) {
-                        return;
+                        return NO;
                 }
-                // NSDate *scheduleTime = [NSDate dateWithTimeIntervalSince1970:deliveryDate];
-                NSDate *scheduleTime = [NSDate dateWithTimeIntervalSinceNow:deliveryDate];
+                NSDate *scheduleTime = [NSDate dateWithTimeIntervalSince1970:deliveryDate];
+                // NSDate *scheduleTime = [NSDate dateWithTimeIntervalSinceNow:deliveryDate];
                 NSUserNotificationCenter *nc = [NSUserNotificationCenter defaultUserNotificationCenter];
                 NotificationCenterDelegate *ncDelegate = [[NotificationCenterDelegate alloc] init];
                 ncDelegate.keepRunning = YES;
@@ -29,6 +32,7 @@ void scheduleNotification(NSString *title, NSString *message, NSString *sound, d
 
                 NSUserNotification *note = [[NSUserNotification alloc] init];
                 note.title = title;
+                note.subtitle = subtitle;
                 note.informativeText = message;
                 note.deliveryDate = scheduleTime;
                 if (![sound isEqualToString:@"_mute"]) {
@@ -36,13 +40,14 @@ void scheduleNotification(NSString *title, NSString *message, NSString *sound, d
                 }
 
                 [nc scheduleNotification:note];
+                return YES;
         }
 }
 
-void sendNotification(NSString *title, NSString *message, NSString *sound) {
+bool sendNotification(NSString *title, NSString *subtitle, NSString *message, NSString *sound) {
         @autoreleasepool {
                 if (!installNSBundleHook()) {
-                        return;
+                        return NO;
                 }
 
                 NSUserNotificationCenter *nc = [NSUserNotificationCenter defaultUserNotificationCenter];
@@ -52,6 +57,7 @@ void sendNotification(NSString *title, NSString *message, NSString *sound) {
 
                 NSUserNotification *note = [[NSUserNotification alloc] init];
                 note.title = title;
+                note.subtitle = subtitle;
                 note.informativeText = message;
                 if (![sound isEqualToString:@"_mute"]) {
                         note.soundName = sound;
@@ -61,5 +67,6 @@ void sendNotification(NSString *title, NSString *message, NSString *sound) {
                 while (ncDelegate.keepRunning) {
                         [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.1]];
                 }
+                return YES;
         }
 }

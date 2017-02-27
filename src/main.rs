@@ -1,31 +1,84 @@
+//! sound under /System/Library/Sounds
+#![allow(improper_ctypes)]
+#![allow(unused_imports)]
+
 #[macro_use]
 extern crate objc_foundation;
+
 use std::ops::Deref;
 use objc_foundation::{NSString, INSString};
 
-#[allow(improper_ctypes)]
-#[link(name = "notify")]
-extern "C" {
-    fn scheduleNotification(title: *const NSString,
-                            message: *const NSString,
-                            sound: *const NSString,
-                            deliveryDate: f64);
-    fn sendNotification(title: *const NSString, message: *const NSString, sound: *const NSString);
-    fn setApplication(newbundleIdentifier: *const NSString) -> bool;
-    fn getBundleIdentifier(appName: *const NSString) -> *const NSString;
+mod sys {
+    use std::ops::Deref;
+    use objc_foundation::{NSString, INSString};
+    #[link(name = "notify")]
+    extern "C" {
+        pub fn scheduleNotification( title: *const NSString,
+                                     subtitle: *const NSString,
+                                     message: *const NSString,
+                                     sound: *const NSString,
+                                     deliveryDate: f64) -> bool;
+        pub fn sendNotification( title: *const NSString,
+                                 subtitle: *const NSString,
+                                 message: *const NSString,
+                                 sound: *const NSString) -> bool;
+        pub fn setApplication(newbundleIdentifier: *const NSString) -> bool;
+        pub fn getBundleIdentifier(appName: *const NSString) -> *const NSString;
+    }
+}
+
+mod util {
+    use super::sys;
+    use std::ops::Deref;
+    use objc_foundation::{NSString, INSString};
+
+    pub fn get_bundle_identifier(app_name: &str) -> String {
+        get_bundle_identifier_or(app_name, "com.apple.Terminal")
+    }
+
+    pub fn get_bundle_identifier_or(app_name: &str, default:&str) -> String {
+        unsafe {
+            String::from(
+                sys::getBundleIdentifier(NSString::from_str(app_name).deref()) // *const NSString
+                    .as_ref() // Option<NSString>
+                    .map(|nstr| nstr.as_str())
+                    .unwrap_or(default)
+            )
+        }
+    }
+
+    /// ACHTUNG
+    pub fn set_application(bundle_ident: &str) -> bool {
+        unsafe {
+            sys::setApplication(NSString::from_str(bundle_ident).deref())
+        }
+    }
+}
+
+
+pub fn schedule_notification(title: &str, subtitle: &str, message: &str, sound: &str) -> bool{
+    unsafe {
+        sys::scheduleNotification(NSString::from_str(title).deref(),
+                                  NSString::from_str(subtitle).deref(),
+                                  NSString::from_str(message).deref(),
+                                  NSString::from_str(sound).deref(),
+                              0.0
+                              )
+    }
+}
+
+pub fn send_notification(title: &str, subtitle: &str, message: &str, sound: &str) -> bool {
+    unsafe {
+       sys::sendNotification(NSString::from_str(title).deref(),
+                             NSString::from_str(subtitle).deref(),
+                             NSString::from_str(message).deref(),
+                             NSString::from_str(sound).deref())
+    }
 }
 
 fn main() {
-    unsafe {
-        let application = getBundleIdentifier(NSString::from_str("Safari").deref());
-        let _ = setApplication(application); // Geht nur ein mal zu setzen
-        sendNotification(NSString::from_str("Hello, world!").deref(),
-                         NSString::from_str("Message").deref(),
-                         NSString::from_str("Ping").deref());
-        scheduleNotification(NSString::from_str("Scheduled World!").deref(),
-                             NSString::from_str("after 5 Seconds").deref(),
-                             NSString::from_str("Ping").deref(),
-                             5.);
-    }
-    println!("Done!");
+    let bundle = util::get_bundle_identifier("firefox");
+    util::set_application(&bundle);
+    let sent = send_notification("Danger", "Will Robinson", "Run away as fast as you can", "Blow");
+
 }
