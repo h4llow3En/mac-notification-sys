@@ -8,6 +8,10 @@ fn main() {
     println!("{:?}", stamp);
     let bundle = util::get_bundle_identifier("firefox");
     util::set_application(&bundle);
-    let _sent = schedule_notification("Danger", "Will Robinson", "Run away as fast as you can", "Blow", stamp+5.);
+    let _sent = schedule_notification_with_subtitle("Danger",
+                                                    Some("Will Robinson"),
+                                                    "Run away as fast as you can",
+                                                    Some("Blow"),
+                                                    stamp + 5.);
 
 }

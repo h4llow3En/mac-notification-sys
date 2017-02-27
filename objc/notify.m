@@ -24,7 +24,6 @@ bool scheduleNotification(NSString *title, NSString *subtitle, NSString *message
                         return NO;
                 }
                 NSDate *scheduleTime = [NSDate dateWithTimeIntervalSince1970:deliveryDate];
-                // NSDate *scheduleTime = [NSDate dateWithTimeIntervalSinceNow:deliveryDate];
                 NSUserNotificationCenter *nc = [NSUserNotificationCenter defaultUserNotificationCenter];
                 NotificationCenterDelegate *ncDelegate = [[NotificationCenterDelegate alloc] init];
                 ncDelegate.keepRunning = YES;
@@ -32,7 +31,9 @@ bool scheduleNotification(NSString *title, NSString *subtitle, NSString *message
 
                 NSUserNotification *note = [[NSUserNotification alloc] init];
                 note.title = title;
-                note.subtitle = subtitle;
+                if (![subtitle isEqualToString:@""]) {
+                        note.subtitle = subtitle;
+                }
                 note.informativeText = message;
                 note.deliveryDate = scheduleTime;
                 if (![sound isEqualToString:@"_mute"]) {
@@ -57,7 +58,9 @@ bool sendNotification(NSString *title, NSString *subtitle, NSString *message, NS
 
                 NSUserNotification *note = [[NSUserNotification alloc] init];
                 note.title = title;
-                note.subtitle = subtitle;
+                if(![subtitle isEqualToString:@""]) {
+                        note.subtitle = subtitle;
+                }
                 note.informativeText = message;
                 if (![sound isEqualToString:@"_mute"]) {
                         note.soundName = sound;

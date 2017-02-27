@@ -13,15 +13,17 @@ mod sys {
     use objc_foundation::{NSString, INSString};
     #[link(name = "notify")]
     extern "C" {
-        pub fn scheduleNotification( title: *const NSString,
-                                     subtitle: *const NSString,
-                                     message: *const NSString,
-                                     sound: *const NSString,
-                                     deliveryDate: f64) -> bool;
-        pub fn sendNotification( title: *const NSString,
-                                 subtitle: *const NSString,
-                                 message: *const NSString,
-                                 sound: *const NSString) -> bool;
+        pub fn scheduleNotification(title: *const NSString,
+                                    subtitle: *const NSString,
+                                    message: *const NSString,
+                                    sound: *const NSString,
+                                    deliveryDate: f64)
+                                    -> bool;
+        pub fn sendNotification(title: *const NSString,
+                                subtitle: *const NSString,
+                                message: *const NSString,
+                                sound: *const NSString)
+                                -> bool;
         pub fn setApplication(newbundleIdentifier: *const NSString) -> bool;
         pub fn getBundleIdentifier(appName: *const NSString) -> *const NSString;
     }
@@ -36,7 +38,7 @@ pub mod util {
         get_bundle_identifier_or(app_name, "com.apple.Terminal")
     }
 
-    pub fn get_bundle_identifier_or(app_name: &str, default:&str) -> String {
+    pub fn get_bundle_identifier_or(app_name: &str, default: &str) -> String {
         unsafe {
             String::from(
                 sys::getBundleIdentifier(NSString::from_str(app_name).deref()) // *const NSString
@@ -49,29 +51,34 @@ pub mod util {
 
     /// ACHTUNG
     pub fn set_application(bundle_ident: &str) -> bool {
-        unsafe {
-            sys::setApplication(NSString::from_str(bundle_ident).deref())
-        }
+        unsafe { sys::setApplication(NSString::from_str(bundle_ident).deref()) }
     }
 }
 
-
-pub fn schedule_notification(title: &str, subtitle: &str, message: &str, sound: &str, delivery_date: f64) -> bool{
+pub fn schedule_notification(title: &str,
+                             subtitle: Option<&str>,
+                             message: &str,
+                             sound: Option<&str>,
+                             delivery_date: f64)
+                             -> bool {
     unsafe {
         sys::scheduleNotification(NSString::from_str(title).deref(),
-                                  NSString::from_str(subtitle).deref(),
+                                  NSString::from_str(subtitle.unwrap_or("")).deref(),
                                   NSString::from_str(message).deref(),
-                                  NSString::from_str(sound).deref(),
-                                  delivery_date
-                              )
+                                  NSString::from_str(sound.unwrap_or("_mute")).deref(),
+                                  delivery_date)
     }
 }
 
-pub fn send_notification(title: &str, subtitle: &str, message: &str, sound: &str) -> bool {
+pub fn send_notification(title: &str,
+                         subtitle: Option<&str>,
+                         message: &str,
+                         sound: Option<&str>)
+                         -> bool {
     unsafe {
-       sys::sendNotification(NSString::from_str(title).deref(),
-                             NSString::from_str(subtitle).deref(),
-                             NSString::from_str(message).deref(),
-                             NSString::from_str(sound).deref())
+        sys::sendNotification(NSString::from_str(title).deref(),
+                              NSString::from_str(subtitle.unwrap_or("")).deref(),
+                              NSString::from_str(message).deref(),
+                              NSString::from_str(sound.unwrap_or("_mute")).deref())
     }
 }
