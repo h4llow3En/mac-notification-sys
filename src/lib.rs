@@ -56,13 +56,13 @@ pub mod util {
 }
 
 
-pub fn schedule_notification(title: &str, subtitle: &str, message: &str, sound: &str) -> bool{
+pub fn schedule_notification(title: &str, subtitle: &str, message: &str, sound: &str, delivery_date: f64) -> bool{
     unsafe {
         sys::scheduleNotification(NSString::from_str(title).deref(),
                                   NSString::from_str(subtitle).deref(),
                                   NSString::from_str(message).deref(),
                                   NSString::from_str(sound).deref(),
-                              0.0
+                                  delivery_date
                               )
     }
 }
@@ -75,4 +75,3 @@ pub fn send_notification(title: &str, subtitle: &str, message: &str, sound: &str
                              NSString::from_str(sound).deref())
     }
 }
-
