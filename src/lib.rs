@@ -1,4 +1,4 @@
-//! sound under /System/Library/Sounds
+//! a very thin wrapper around NSNotifications
 #![allow(improper_ctypes)]
 #![allow(unused_imports)]
 
