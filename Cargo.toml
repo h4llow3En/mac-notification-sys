@@ -1,7 +1,7 @@
 [package]
-name = "macos_notifications"
+name = "macos-notifications-sys"
 version = "0.1.0"
-authors = ["h4llow3En <mail@felixdoering.com>"]
+authors = ["Felix Döring <mail@felixdoering.com>"]
 build = "build.rs"
 
 [dependencies]

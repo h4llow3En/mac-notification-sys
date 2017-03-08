@@ -17,7 +17,7 @@ BOOL setApplication(NSString *newbundleIdentifier) {
         return NO;
 }
 
-/// scheduleNotification(title: &str, message: &str, sound: &str, f64) -> Result<()>
+/// scheduleNotification(title: &str, subtitle: &str message: &str, sound: &str, f64) -> Result<()>
 bool scheduleNotification(NSString *title, NSString *subtitle, NSString *message, NSString *sound, double deliveryDate) {
         @autoreleasepool {
                 if (!installNSBundleHook()) {
@@ -45,6 +45,7 @@ bool scheduleNotification(NSString *title, NSString *subtitle, NSString *message
         }
 }
 
+/// sendNotification(title: &str, subtitle: &str, message: &str, sound: &str) -> Result<()>
 bool sendNotification(NSString *title, NSString *subtitle, NSString *message, NSString *sound) {
         @autoreleasepool {
                 if (!installNSBundleHook()) {

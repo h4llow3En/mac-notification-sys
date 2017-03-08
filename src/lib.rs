@@ -1,4 +1,5 @@
 //! a very thin wrapper around NSNotifications
+#![cfg(target_os = "macos")]
 #![allow(improper_ctypes)]
 #![allow(unused_imports)]
 
