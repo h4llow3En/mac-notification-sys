@@ -34,8 +34,8 @@ impl Error for ApplicationError {
 }
 
 impl From<ApplicationError> for ErrorKind {
-    fn from(a: ApplicationError) -> Self {
-        ErrorKind::ApplicationError(a)
+    fn from(e: ApplicationError) -> Self {
+        ErrorKind::ApplicationError(e)
     }
 }
 
@@ -63,7 +63,7 @@ impl Error for NotificationError {
 }
 
 impl From<NotificationError> for ErrorKind {
-    fn from(n: NotificationError) -> Self {
-        ErrorKind::NotificationError(n)
+    fn from(e: NotificationError) -> Self {
+        ErrorKind::NotificationError(e)
     }
 }

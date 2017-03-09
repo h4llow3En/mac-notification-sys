@@ -6,14 +6,12 @@
 extern crate objc_foundation;
 extern crate chrono;
 mod error;
+pub mod util;
 
 use std::ops::Deref;
 use objc_foundation::{NSString, INSString};
 use chrono::prelude::*;
 use error::*;
-
-
-static mut APPLICATION_SET: bool = false;
 
 mod sys {
     use objc_foundation::NSString;
@@ -35,40 +33,6 @@ mod sys {
     }
 }
 
-pub mod util {
-    use super::sys;
-    use error::*;
-    use std::ops::Deref;
-    use objc_foundation::{NSString, INSString};
-
-    pub fn get_bundle_identifier(app_name: &str) -> String {
-        get_bundle_identifier_or(app_name).unwrap_or("com.apple.Terminal".to_string())
-    }
-
-    pub fn get_bundle_identifier_or(app_name: &str) -> Option<String> {
-        unsafe {
-            sys::getBundleIdentifier(NSString::from_str(app_name).deref()) // *const NSString
-                .as_ref() // Option<NSString>
-                .map(|nstr| nstr.as_str().to_owned())
-        }
-    }
-
-    /// ACHTUNG
-    pub fn set_application(bundle_ident: &str) -> NotificationResult<()> {
-        unsafe {
-            if super::APPLICATION_SET {
-                Err(ApplicationError::AlreadySet.into())
-            } else {
-                if sys::setApplication(NSString::from_str(bundle_ident).deref()) {
-                    Ok(())
-                } else {
-                    Err(ApplicationError::CouldNotSet.into())
-                }
-            }
-        }
-    }
-}
-
 pub fn schedule_notification(title: &str,
                              subtitle: Option<&str>,
                              message: &str,
@@ -78,11 +42,17 @@ pub fn schedule_notification(title: &str,
     if UTC::now().timestamp() as f64 >= delivery_date {
         Err(NotificationError::ScheduleInThePast.into())
     } else {
+        let mut use_sound: &str = "_mute";
+        if sound.is_some() {
+            if util::check_sound(sound.unwrap()) {
+                use_sound = sound.unwrap();
+            }
+        }
         unsafe {
             if sys::scheduleNotification(NSString::from_str(title).deref(),
                                          NSString::from_str(subtitle.unwrap_or("")).deref(),
                                          NSString::from_str(message).deref(),
-                                         NSString::from_str(sound.unwrap_or("_mute")).deref(),
+                                         NSString::from_str(use_sound).deref(),
                                          delivery_date) {
                 Ok(())
             } else {
@@ -97,11 +67,17 @@ pub fn send_notification(title: &str,
                          message: &str,
                          sound: Option<&str>)
                          -> NotificationResult<()> {
+    let mut use_sound: &str = "_mute";
+    if sound.is_some() {
+        if util::check_sound(sound.unwrap()) {
+            use_sound = sound.unwrap();
+        }
+    }
     unsafe {
         if sys::sendNotification(NSString::from_str(title).deref(),
                                  NSString::from_str(subtitle.unwrap_or("")).deref(),
                                  NSString::from_str(message).deref(),
-                                 NSString::from_str(sound.unwrap_or("_mute")).deref()) {
+                                 NSString::from_str(use_sound).deref()) {
             Ok(())
         } else {
             Err(NotificationError::UnableToDeliver.into())
