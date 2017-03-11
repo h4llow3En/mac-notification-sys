@@ -12,7 +12,7 @@ license = "MIT"
 keywords = ["notification", "masOS", "OS X", "notify"]
 readme = "README.md"
 
-include = [".gitignore", ".travis.yml", "Cargo.toml", "objc/*", "src/*.rs", "tests/*.rs"]
+include = [".gitignore", ".travis.yml", "Cargo.toml", "build.rs", "objc/*", "src/*.rs", "tests/*.rs"]
 
 build = "build.rs"
 
