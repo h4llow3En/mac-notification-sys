@@ -142,6 +142,7 @@ pub fn set_application(bundle_ident: &str) -> NotificationResult<()> {
         if APPLICATION_SET {
             Err(ApplicationError::AlreadySet.into())
         } else {
+            APPLICATION_SET = true;
             if sys::setApplication(NSString::from_str(bundle_ident).deref()) {
                 Ok(())
             } else {
