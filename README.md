@@ -1,6 +1,8 @@
 # mac-notification-sys
 
-[![Build Status](https://travis-ci.com/h4llow3En/macos-notifications-sys.svg?token=nfC1sQZDhGQq93RfYx3k&branch=master)](https://travis-ci.com/h4llow3En/macos-notifications-sys)
+[![license](https://img.shields.io/crates/l/mac-notification-sys.svg)](https://crates.io/crates/mac-notification-sys/)
+[![version](https://img.shields.io/crates/v/mac-notification-sys.svg)](https://crates.io/crates/mac-notification-sys/)
+[![Build Status](https://travis-ci.com/h4llow3En/mac-notification-sys.svg?token=nfC1sQZDhGQq93RfYx3k&branch=master)](https://travis-ci.com/h4llow3En/mac-notification-sys)
 
 A simple wrapper to deliver or schedule macOS Notifications in Rust.
 
