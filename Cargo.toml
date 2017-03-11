@@ -9,7 +9,7 @@ repository = "https://github.com/h4llow3En/mac-notification-sys"
 documentation = "https://docs.rs/mac-notification-sys/"
 
 license = "MIT"
-keywords = ["notification", "masOS", "OS X", "notify"]
+keywords = ["notification", "masOS", "osx", "notify"]
 readme = "README.md"
 
 include = [".gitignore", ".travis.yml", "Cargo.toml", "build.rs", "objc/*", "src/*.rs", "tests/*.rs"]
