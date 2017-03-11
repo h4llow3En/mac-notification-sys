@@ -33,6 +33,18 @@ mod sys {
     }
 }
 
+/// Schedules a new notification in the NotificationCenter
+///
+/// # Example:
+/// ```
+/// # extern crate macos_notifications_sys;
+/// # extern crate chrono;
+/// use chrono::prelude::*;
+/// use macos_notifications_sys::*;
+///
+/// // schedule a notification in 5 seconds
+/// let _ = schedule_notification("Title", None, "This is the body", UTC::now().timestamp() as f64 + 5.).unwrap()
+/// ```
 pub fn schedule_notification(title: &str,
                              subtitle: Option<&str>,
                              message: &str,
@@ -62,6 +74,7 @@ pub fn schedule_notification(title: &str,
     }
 }
 
+/// Delivers a new notification
 pub fn send_notification(title: &str,
                          subtitle: Option<&str>,
                          message: &str,

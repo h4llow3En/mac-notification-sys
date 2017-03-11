@@ -53,7 +53,7 @@ bool sendNotification(NSString *title, NSString *subtitle, NSString *message, NS
                 }
 
                 NSUserNotificationCenter *nc = [NSUserNotificationCenter defaultUserNotificationCenter];
-                NotificationCenterDelegate *ncDelegate = [[NotificationCenterDelegate alloc]init];
+                NotificationCenterDelegate *ncDelegate = [[NotificationCenterDelegate alloc] init];
                 ncDelegate.keepRunning = YES;
                 nc.delegate = ncDelegate;
 
