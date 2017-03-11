@@ -1,6 +1,6 @@
 #import "notify.h"
 
-/// getBundleIdentifier(app_name: &str) -> "de.hoodie.notify"
+// getBundleIdentifier(app_name: &str) -> "com.apple.Terminal"
 NSString *getBundleIdentifier(NSString *appName){
         NSString *findString = [NSString stringWithFormat:@"get id of application \"%@\"", appName];
         NSAppleScript *findScript = [[NSAppleScript alloc] initWithSource:findString];
@@ -8,7 +8,7 @@ NSString *getBundleIdentifier(NSString *appName){
         return [resultDescriptor stringValue];
 }
 
-/// setApplication(new_bundle_identifier: &str) -> Result<()>
+// setApplication(new_bundle_identifier: &str) -> Result<()>
 BOOL setApplication(NSString *newbundleIdentifier) {
         if(LSCopyApplicationURLsForBundleIdentifier((CFStringRef)newbundleIdentifier, NULL) != NULL) {
                 fakeBundleIdentifier = newbundleIdentifier;
@@ -17,7 +17,7 @@ BOOL setApplication(NSString *newbundleIdentifier) {
         return NO;
 }
 
-/// scheduleNotification(title: &str, subtitle: &str message: &str, sound: &str, f64) -> Result<()>
+// scheduleNotification(title: &str, subtitle: &str message: &str, sound: &str, f64) -> NotificationResult<()>
 bool scheduleNotification(NSString *title, NSString *subtitle, NSString *message, NSString *sound, double deliveryDate) {
         @autoreleasepool {
                 if (!installNSBundleHook()) {
@@ -45,7 +45,7 @@ bool scheduleNotification(NSString *title, NSString *subtitle, NSString *message
         }
 }
 
-/// sendNotification(title: &str, subtitle: &str, message: &str, sound: &str) -> Result<()>
+// sendNotification(title: &str, subtitle: &str, message: &str, sound: &str) -> NotificationResult<()>
 bool sendNotification(NSString *title, NSString *subtitle, NSString *message, NSString *sound) {
         @autoreleasepool {
                 if (!installNSBundleHook()) {

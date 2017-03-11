@@ -1,5 +1,5 @@
 [package]
-name = "macos-notifications-sys"
+name = "mac-notification-sys"
 version = "0.1.0"
 authors = ["Felix Döring <mail@felixdoering.com>"]
 build = "build.rs"

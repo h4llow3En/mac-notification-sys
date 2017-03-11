@@ -1,16 +1,18 @@
+//! Custum errors for mac_notification_sys
+#![allow(missing_docs)]
 use std::error::Error;
 use std::fmt;
 use std::convert::From;
 
 pub type NotificationResult<T> = Result<T, ErrorKind>;
 
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 pub enum ErrorKind {
     ApplicationError(ApplicationError),
     NotificationError(NotificationError),
 }
 
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 pub enum ApplicationError {
     AlreadySet,
     CouldNotSet,
@@ -39,7 +41,7 @@ impl From<ApplicationError> for ErrorKind {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 pub enum NotificationError {
     ScheduleInThePast,
     UnableToSchedule,
