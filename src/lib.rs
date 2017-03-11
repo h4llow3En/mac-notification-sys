@@ -36,14 +36,14 @@ mod sys {
 /// Schedules a new notification in the NotificationCenter
 ///
 /// # Example:
-/// ```
-/// # extern crate macos_notifications_sys;
-/// # extern crate chrono;
-/// use chrono::prelude::*;
+/// ```rust
+/// extern crate macos_notifications_sys;
 /// use macos_notifications_sys::*;
+/// extern crate chrono;
+/// use chrono::prelude::*;
 ///
 /// // schedule a notification in 5 seconds
-/// let _ = schedule_notification("Title", None, "This is the body", UTC::now().timestamp() as f64 + 5.).unwrap()
+/// let _ = schedule_notification("Title", None, "This is the body", Some("Ping"), UTC::now().timestamp() as f64 + 5.).unwrap();
 /// ```
 pub fn schedule_notification(title: &str,
                              subtitle: Option<&str>,
@@ -75,6 +75,15 @@ pub fn schedule_notification(title: &str,
 }
 
 /// Delivers a new notification
+///
+/// # Example:
+/// ```rust
+/// extern crate macos_notifications_sys;
+/// use macos_notifications_sys::*;
+///
+/// // daliver a silent notification
+/// let _ = send_notification("Title", None, "This is the body", None).unwrap();
+/// ```
 pub fn send_notification(title: &str,
                          subtitle: Option<&str>,
                          message: &str,
