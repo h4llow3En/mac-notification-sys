@@ -9,9 +9,9 @@ fn main() {
     let bundle = get_bundle_identifier_or_default("firefox");
     set_application(&bundle).unwrap();
     schedule_notification("Danger",
-                          Some("Will Robinson"),
+                          &Some("Will Robinson"),
                           "Run away as fast as you can",
-                          Some("Blow"),
+                          &Some("Blow"),
                           stamp + 5.)
         .unwrap();
 

@@ -1,12 +1,12 @@
 [package]
 name = "mac-notification-sys"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Felix Döring <mail@felixdoering.com>"]
 description = "Thin wrapper around macOS Notifications."
 
 homepage = "https://github.com/h4llow3En/mac-notification-sys"
 repository = "https://github.com/h4llow3En/mac-notification-sys"
-documentation = "https://docs.rs/mac-notification-sys/"
+documentation = "https://docs.rs/crate/mac-notification-sys/"
 
 license = "MIT"
 keywords = ["notification", "masOS", "osx", "notify"]

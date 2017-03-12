@@ -9,9 +9,9 @@ use mac_notification_sys::*;
 fn dont_schedle_in_past() {
     let stamp = UTC::now().timestamp() as f64 - 5.;
     let _sent = schedule_notification("Danger",
-                                      Some("Will Robinson"),
+                                      &Some("Will Robinson"),
                                       "Run away as fast as you can",
-                                      Some("Blow"),
+                                      &Some("Blow"),
                                       stamp + 5.)
         .unwrap();
 }

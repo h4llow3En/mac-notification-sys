@@ -55,13 +55,13 @@ mod sys {
 /// use chrono::prelude::*;
 ///
 /// // schedule a notification in 5 seconds
-/// let _ = schedule_notification("Title", None, "This is the body", Some("Ping"),
+/// let _ = schedule_notification("Title", &None, "This is the body", &Some("Ping"),
 ///                               UTC::now().timestamp() as f64 + 5.).unwrap();
 /// ```
 pub fn schedule_notification(title: &str,
-                             subtitle: Option<&str>,
+                             subtitle: &Option<&str>,
                              message: &str,
-                             sound: Option<&str>,
+                             sound: &Option<&str>,
                              delivery_date: f64)
                              -> NotificationResult<()> {
     if UTC::now().timestamp() as f64 >= delivery_date {
@@ -96,12 +96,12 @@ pub fn schedule_notification(title: &str,
 /// ```no_run
 /// # use mac_notification_sys::*;
 /// // daliver a silent notification
-/// let _ = send_notification("Title", None, "This is the body", None).unwrap();
+/// let _ = send_notification("Title", &None, "This is the body", &None).unwrap();
 /// ```
 pub fn send_notification(title: &str,
-                         subtitle: Option<&str>,
+                         subtitle: &Option<&str>,
                          message: &str,
-                         sound: Option<&str>)
+                         sound: &Option<&str>)
                          -> NotificationResult<()> {
     let mut use_sound: &str = "_mute";
     if sound.is_some() {
