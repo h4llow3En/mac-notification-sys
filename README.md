@@ -13,6 +13,8 @@ A simple wrapper to deliver or schedule macOS Notifications in Rust.
 [dependencies]
 mac-notification-sys = "0.1.0"
 ```
+## Documentation
+The documentation can be found [here](https://h4llow3en.github.io/mac-notification-sys/mac_notification_sys/)
 
 ## Example
 

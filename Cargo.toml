@@ -6,7 +6,7 @@ description = "Thin wrapper around macOS Notifications."
 
 homepage = "https://github.com/h4llow3En/mac-notification-sys"
 repository = "https://github.com/h4llow3En/mac-notification-sys"
-documentation = "https://docs.rs/crate/mac-notification-sys/"
+documentation = "https://h4llow3en.github.io/mac-notification-sys/mac_notification_sys/"
 
 license = "MIT"
 keywords = ["notification", "masOS", "osx", "notify"]
