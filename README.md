@@ -30,7 +30,7 @@ fn main() {
                       "Run away as fast as you can",
                       &Some("Blow"))
         .unwrap();
-    send_notification("NOW", None, "Without subtitle", Some("Submarine")).unwrap();
+    send_notification("NOW", &None, "Without subtitle", &Some("Submarine")).unwrap();
 
 }
 ```
