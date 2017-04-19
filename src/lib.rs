@@ -8,7 +8,6 @@
 #![cfg(target_os = "macos")]
 #![allow(improper_ctypes)]
 
-#[macro_use]
 extern crate objc_foundation;
 extern crate chrono;
 pub mod error;
@@ -165,8 +164,7 @@ fn check_sound(sound_name: &str) -> bool {
         None => print!("No home path found.", ),
     }
     for mut check_path in sound_paths {
-        check_path.push(sound_name);
-        check_path.push(".aiff");
+        check_path.push(format!("{}.aiff",sound_name));
         if check_path.exists() {
             file_exists = true;
         }
