@@ -93,12 +93,12 @@
 <span id="48">48</span>
 <span id="49">49</span>
 </pre><pre class="rust ">
-<span class="doccomment">//! Custum errors for mac-notification-sys</span>
+<span class="doccomment">//! Custom errors for mac-notification-sys.</span>
 
-<span class="doccomment">/// Custom Result type for mac-notification-sys</span>
+<span class="doccomment">/// Custom Result type for mac-notification-sys.</span>
 <span class="kw">pub</span> <span class="kw">type</span> <span class="ident">NotificationResult</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="op">=</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>;
 
-<span class="doccomment">/// Errors that can occur setting the Bundle Identifier</span>
+<span class="doccomment">/// Errors that can occur setting the Bundle Identifier.</span>
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">applications_error</span> {
     <span class="macro">error_chain</span><span class="macro">!</span>{
         <span class="ident">errors</span> {
@@ -114,7 +114,7 @@
     }
 }
 
-<span class="doccomment">/// Errors that can occur while interacting with the NSUserNotificationCenter</span>
+<span class="doccomment">/// Errors that can occur while interacting with the NSUserNotificationCenter.</span>
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">notification_error</span> {
     <span class="macro">error_chain</span><span class="macro">!</span>{
         <span class="ident">errors</span> {
