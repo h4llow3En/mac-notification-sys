@@ -4,14 +4,14 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="rustdoc">
-    <meta name="description" content="API documentation for the Rust `error` mod in crate `mac_notification_sys`.">
-    <meta name="keywords" content="rust, rustlang, rust-lang, error">
+    <meta name="description" content="API documentation for the Rust `applications_error` mod in crate `mac_notification_sys`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, applications_error">
 
-    <title>mac_notification_sys::error - Rust</title>
+    <title>mac_notification_sys::error::applications_error - Rust</title>
 
-    <link rel="stylesheet" type="text/css" href="../../normalize.css">
-    <link rel="stylesheet" type="text/css" href="../../rustdoc.css">
-    <link rel="stylesheet" type="text/css" href="../../main.css">
+    <link rel="stylesheet" type="text/css" href="../../../normalize.css">
+    <link rel="stylesheet" type="text/css" href="../../../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../../../main.css">
     
 
     
@@ -29,7 +29,7 @@
 
     <nav class="sidebar">
         
-        <p class='location'>Module error</p><div class="block items"><ul><li><a href="#modules">Modules</a></li><li><a href="#structs">Structs</a></li><li><a href="#enums">Enums</a></li><li><a href="#traits">Traits</a></li><li><a href="#types">Type Definitions</a></li></ul></div><p class='location'><a href='../index.html'>mac_notification_sys</a></p><script>window.sidebarCurrent = {name: 'error', ty: 'mod', relpath: '../'};</script><script defer src="../sidebar-items.js"></script>
+        <p class='location'>Module applications_error</p><div class="block items"><ul><li><a href="#structs">Structs</a></li><li><a href="#enums">Enums</a></li><li><a href="#traits">Traits</a></li><li><a href="#types">Type Definitions</a></li></ul></div><p class='location'><a href='../../index.html'>mac_notification_sys</a>::<wbr><a href='../index.html'>error</a></p><script>window.sidebarCurrent = {name: 'applications_error', ty: 'mod', relpath: '../'};</script><script defer src="../sidebar-items.js"></script>
     </nav>
 
     <nav class="sub">
@@ -44,32 +44,17 @@
     </nav>
 
     <section id='main' class="content">
-<h1 class='fqn'><span class='in-band'>Module <a href='../index.html'>mac_notification_sys</a>::<wbr><a class="mod" href=''>error</a></span><span class='out-of-band'><span id='render-detail'>
+<h1 class='fqn'><span class='in-band'>Module <a href='../../index.html'>mac_notification_sys</a>::<wbr><a href='../index.html'>error</a>::<wbr><a class="mod" href=''>applications_error</a></span><span class='out-of-band'><span id='render-detail'>
                    <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
                        [<span class='inner'>&#x2212;</span>]
                    </a>
-               </span><a class='srclink' href='../../src/mac_notification_sys/error.rs.html#1-49' title='goto source code'>[src]</a></span></h1>
-<div class='docblock'><p>Custum errors for mac-notification-sys</p>
-</div><h2 id='modules' class='section-header'><a href="#modules">Modules</a></h2>
-<table>
-                       <tr class=' module-item'>
-                           <td><a class="mod" href="applications_error/index.html"
-                                  title='mod mac_notification_sys::error::applications_error'>applications_error</a></td>
-                           <td class='docblock-short'>
-                                <p>Errors that can occur setting the Bundle Identifier</p>
-                           </td>
-                       </tr>
-                       <tr class=' module-item'>
-                           <td><a class="mod" href="notification_error/index.html"
-                                  title='mod mac_notification_sys::error::notification_error'>notification_error</a></td>
-                           <td class='docblock-short'>
-                                <p>Errors that can occur while interacting with the NSUserNotificationCenter</p>
-                           </td>
-                       </tr></table><h2 id='structs' class='section-header'><a href="#structs">Structs</a></h2>
+               </span><a class='srclink' href='../../../src/mac_notification_sys/error.rs.html#7-20' title='goto source code'>[src]</a></span></h1>
+<div class='docblock'><p>Errors that can occur setting the Bundle Identifier</p>
+</div><h2 id='structs' class='section-header'><a href="#structs">Structs</a></h2>
 <table>
                        <tr class=' module-item'>
                            <td><a class="struct" href="struct.Error.html"
-                                  title='struct mac_notification_sys::error::Error'>Error</a></td>
+                                  title='struct mac_notification_sys::error::applications_error::Error'>Error</a></td>
                            <td class='docblock-short'>
                                 <p>The Error type.</p>
                            </td>
@@ -77,7 +62,7 @@
 <table>
                        <tr class=' module-item'>
                            <td><a class="enum" href="enum.ErrorKind.html"
-                                  title='enum mac_notification_sys::error::ErrorKind'>ErrorKind</a></td>
+                                  title='enum mac_notification_sys::error::applications_error::ErrorKind'>ErrorKind</a></td>
                            <td class='docblock-short'>
                                 <p>The kind of an error.</p>
                            </td>
@@ -85,22 +70,15 @@
 <table>
                        <tr class=' module-item'>
                            <td><a class="trait" href="trait.ResultExt.html"
-                                  title='trait mac_notification_sys::error::ResultExt'>ResultExt</a></td>
+                                  title='trait mac_notification_sys::error::applications_error::ResultExt'>ResultExt</a></td>
                            <td class='docblock-short'>
                                 <p>Additional methods for <code>Result</code>, for easy interaction with this crate.</p>
                            </td>
                        </tr></table><h2 id='types' class='section-header'><a href="#types">Type Definitions</a></h2>
 <table>
                        <tr class=' module-item'>
-                           <td><a class="type" href="type.NotificationResult.html"
-                                  title='type mac_notification_sys::error::NotificationResult'>NotificationResult</a></td>
-                           <td class='docblock-short'>
-                                <p>Custom Result type for mac-notification-sys</p>
-                           </td>
-                       </tr>
-                       <tr class=' module-item'>
                            <td><a class="type" href="type.Result.html"
-                                  title='type mac_notification_sys::error::Result'>Result</a></td>
+                                  title='type mac_notification_sys::error::applications_error::Result'>Result</a></td>
                            <td class='docblock-short'>
                                 <p>Convenient wrapper around <code>std::Result</code>.</p>
                            </td>
@@ -158,11 +136,11 @@
     
 
     <script>
-        window.rootPath = "../../";
+        window.rootPath = "../../../";
         window.currentCrate = "mac_notification_sys";
     </script>
-    <script src="../../jquery.js"></script>
-    <script src="../../main.js"></script>
-    <script defer src="../../search-index.js"></script>
+    <script src="../../../jquery.js"></script>
+    <script src="../../../main.js"></script>
+    <script defer src="../../../search-index.js"></script>
 </body>
 </html>
