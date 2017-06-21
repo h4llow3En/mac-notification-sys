@@ -1,9 +1,9 @@
-//! Custum errors for mac-notification-sys
+//! Custom errors for mac-notification-sys.
 
-/// Custom Result type for mac-notification-sys
+/// Custom Result type for mac-notification-sys.
 pub type NotificationResult<T> = Result<T>;
 
-/// Errors that can occur setting the Bundle Identifier
+/// Errors that can occur setting the Bundle Identifier.
 pub mod applications_error {
     error_chain!{
         errors {
@@ -19,7 +19,7 @@ pub mod applications_error {
     }
 }
 
-/// Errors that can occur while interacting with the NSUserNotificationCenter
+/// Errors that can occur while interacting with the NSUserNotificationCenter.
 pub mod notification_error {
     error_chain!{
         errors {
