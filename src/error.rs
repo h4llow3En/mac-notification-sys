@@ -1,71 +1,49 @@
-//! Custum errors for mac_notification_sys
-#![allow(missing_docs)]
-use std::error::Error;
-use std::fmt;
-use std::convert::From;
+//! Custum errors for mac-notification-sys
 
-pub type NotificationResult<T> = Result<T, ErrorKind>;
+/// Custom Result type for mac-notification-sys
+pub type NotificationResult<T> = Result<T>;
 
-#[derive(Clone, Copy, Debug)]
-pub enum ErrorKind {
-    ApplicationError(ApplicationError),
-    NotificationError(NotificationError),
-}
-
-#[derive(Clone, Copy, Debug)]
-pub enum ApplicationError {
-    AlreadySet,
-    CouldNotSet,
-}
-
-impl fmt::Display for ApplicationError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.description())
-    }
-}
-
-impl Error for ApplicationError {
-    fn description(&self) -> &str {
-        match *self {
-            ApplicationError::AlreadySet => "Application can only be set once.",
-            ApplicationError::CouldNotSet => {
-                "Could not set application, using default \"com.apple.Termial\""
+/// Errors that can occur setting the Bundle Identifier
+pub mod applications_error {
+    error_chain!{
+        errors {
+            /// The application name is already set.
+            AlreadySet{
+                description("Application can only be set once.")
+            }
+            /// The application name could not be set.
+            CouldNotSet{
+                description("Could not set application, using default \"com.apple.Termial\"")
             }
         }
     }
 }
 
-impl From<ApplicationError> for ErrorKind {
-    fn from(e: ApplicationError) -> Self {
-        ErrorKind::ApplicationError(e)
-    }
-}
+/// Errors that can occur while interacting with the NSUserNotificationCenter
+pub mod notification_error {
+    error_chain!{
+        errors {
+            /// Notifications can not be scheduled in the past.
+            ScheduleInThePast {
+                description("Can not schedule notification in the past")
+            }
 
-#[derive(Clone, Copy, Debug)]
-pub enum NotificationError {
-    ScheduleInThePast,
-    UnableToSchedule,
-    UnableToDeliver,
-}
+            /// Schedule a notification caused an error.
+            UnableToSchedule {
+                description("Could not schedule notification")
+            }
 
-impl fmt::Display for NotificationError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.description())
-    }
-}
-
-impl Error for NotificationError {
-    fn description(&self) -> &str {
-        match *self {
-            NotificationError::ScheduleInThePast => "Can not schedule notification in the past",
-            NotificationError::UnableToSchedule => "Could not schedule notification",
-            NotificationError::UnableToDeliver => "Could not deliver notification",
+            /// Deliver a notification caused an error.
+            UnableToDeliver {
+                description("Could not deliver notification")
+            }
         }
     }
 }
 
-impl From<NotificationError> for ErrorKind {
-    fn from(e: NotificationError) -> Self {
-        ErrorKind::NotificationError(e)
+error_chain! {
+    links {
+        ApplicationError(applications_error::Error, applications_error::ErrorKind) #[doc = "An error setting the application occured."];
+        NotificationError(notification_error::Error, notification_error::ErrorKind) #[doc = "An error scheduling the notification occured."];
     }
 }

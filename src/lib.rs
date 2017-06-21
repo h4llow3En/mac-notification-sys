@@ -1,4 +1,4 @@
-//! a very thin wrapper around NSNotifications
+//! A very thin wrapper around NSNotifications
 #![deny(missing_docs,
         missing_copy_implementations,
         trivial_casts, trivial_numeric_casts,
@@ -9,12 +9,13 @@
 #![allow(improper_ctypes)]
 
 extern crate objc_foundation;
+#[macro_use] extern crate error_chain;
 extern crate chrono;
 pub mod error;
 
 use std::ops::Deref;
 use objc_foundation::{NSString, INSString};
-use chrono::prelude::*;
+use chrono::offset::*;
 use error::*;
 use std::path::PathBuf;
 use std::env;
@@ -51,11 +52,11 @@ mod sys {
 /// ```ignore
 /// extern crate chrono;
 /// # use mac_notification_sys::*;
-/// use chrono::prelude::*;
+/// use chrono::offset::*;
 ///
 /// // schedule a notification in 5 seconds
 /// let _ = schedule_notification("Title", &None, "This is the body", &Some("Ping"),
-///                               UTC::now().timestamp() as f64 + 5.).unwrap();
+///                               Utc::now().timestamp() as f64 + 5.).unwrap();
 /// ```
 pub fn schedule_notification(title: &str,
                              subtitle: &Option<&str>,
@@ -63,8 +64,8 @@ pub fn schedule_notification(title: &str,
                              sound: &Option<&str>,
                              delivery_date: f64)
                              -> NotificationResult<()> {
-    if UTC::now().timestamp() as f64 >= delivery_date {
-        Err(NotificationError::ScheduleInThePast.into())
+    if Utc::now().timestamp() as f64 >= delivery_date {
+        Err(ErrorKind::NotificationError(notification_error::ErrorKind::ScheduleInThePast).into())
     } else {
         let mut use_sound: &str = "_mute";
         if sound.is_some() {
@@ -80,7 +81,7 @@ pub fn schedule_notification(title: &str,
                                          delivery_date) {
                 Ok(())
             } else {
-                Err(NotificationError::UnableToSchedule.into())
+                Err(ErrorKind::NotificationError(notification_error::ErrorKind::UnableToSchedule).into())
             }
         }
     }
@@ -115,7 +116,7 @@ pub fn send_notification(title: &str,
                                  NSString::from_str(use_sound).deref()) {
             Ok(())
         } else {
-            Err(NotificationError::UnableToDeliver.into())
+            Err(ErrorKind::NotificationError(notification_error::ErrorKind::UnableToDeliver).into())
         }
     }
 }
@@ -139,13 +140,13 @@ pub fn get_bundle_identifier(app_name: &str) -> Option<String> {
 pub fn set_application(bundle_ident: &str) -> NotificationResult<()> {
     unsafe {
         if APPLICATION_SET {
-            Err(ApplicationError::AlreadySet.into())
+            Err(ErrorKind::ApplicationError(applications_error::ErrorKind::AlreadySet).into())
         } else {
             APPLICATION_SET = true;
             if sys::setApplication(NSString::from_str(bundle_ident).deref()) {
                 Ok(())
             } else {
-                Err(ApplicationError::CouldNotSet.into())
+                Err(ErrorKind::ApplicationError(applications_error::ErrorKind::CouldNotSet).into())
             }
         }
     }

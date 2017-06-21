@@ -1,10 +1,10 @@
 extern crate mac_notification_sys;
 extern crate chrono;
-use chrono::prelude::*;
+use chrono::offset::*;
 use mac_notification_sys::*;
 
 fn main() {
-    let stamp = UTC::now().timestamp() as f64 + 5.;
+    let stamp = Utc::now().timestamp() as f64 + 5.;
     println!("{:?}", stamp);
     let bundle = get_bundle_identifier_or_default("firefox");
     set_application(&bundle).unwrap();
