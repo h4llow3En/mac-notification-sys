@@ -66,7 +66,7 @@ pub fn schedule_notification(
     delivery_date: f64,
 ) -> NotificationResult<()> {
     ensure!(
-        Utc::now().timestamp() as f64 >= delivery_date,
+        delivery_date >= Utc::now().timestamp() as f64,
         NotificationError::ScheduleInThePast
     );
 

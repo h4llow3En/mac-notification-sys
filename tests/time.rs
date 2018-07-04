@@ -12,6 +12,7 @@ fn dont_schedle_in_past() {
                                       &Some("Will Robinson"),
                                       "Run away as fast as you can",
                                       &Some("Blow"),
-                                      stamp + 5.)
+                                      stamp)
         .unwrap();
 }
+
