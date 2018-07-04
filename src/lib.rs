@@ -1,24 +1,22 @@
 //! A very thin wrapper around NSNotifications
-#![deny(missing_docs,
-        missing_copy_implementations,
-        trivial_casts, trivial_numeric_casts,
-        unused_import_braces, unused_qualifications)]
-#![warn(missing_debug_implementations)]
-
+#![deny(
+    missing_docs, trivial_casts, trivial_numeric_casts, unused_import_braces, unused_qualifications
+)]
 #![cfg(target_os = "macos")]
 #![allow(improper_ctypes)]
 
-extern crate objc_foundation;
-#[macro_use] extern crate error_chain;
 extern crate chrono;
+extern crate objc_foundation;
+#[macro_use]
+extern crate failure;
 pub mod error;
 
-use std::ops::Deref;
-use objc_foundation::{NSString, INSString};
 use chrono::offset::*;
 use error::*;
-use std::path::PathBuf;
+use objc_foundation::{INSString, NSString};
 use std::env;
+use std::ops::Deref;
+use std::path::PathBuf;
 
 static mut APPLICATION_SET: bool = false;
 
@@ -26,17 +24,19 @@ mod sys {
     use objc_foundation::NSString;
     #[link(name = "notify")]
     extern "C" {
-        pub fn scheduleNotification(title: *const NSString,
-                                    subtitle: *const NSString,
-                                    message: *const NSString,
-                                    sound: *const NSString,
-                                    deliveryDate: f64)
-                                    -> bool;
-        pub fn sendNotification(title: *const NSString,
-                                subtitle: *const NSString,
-                                message: *const NSString,
-                                sound: *const NSString)
-                                -> bool;
+        pub fn scheduleNotification(
+            title: *const NSString,
+            subtitle: *const NSString,
+            message: *const NSString,
+            sound: *const NSString,
+            deliveryDate: f64,
+        ) -> bool;
+        pub fn sendNotification(
+            title: *const NSString,
+            subtitle: *const NSString,
+            message: *const NSString,
+            sound: *const NSString,
+        ) -> bool;
         pub fn setApplication(newbundleIdentifier: *const NSString) -> bool;
         pub fn getBundleIdentifier(appName: *const NSString) -> *const NSString;
     }
@@ -58,32 +58,34 @@ mod sys {
 /// let _ = schedule_notification("Title", &None, "This is the body", &Some("Ping"),
 ///                               Utc::now().timestamp() as f64 + 5.).unwrap();
 /// ```
-pub fn schedule_notification(title: &str,
-                             subtitle: &Option<&str>,
-                             message: &str,
-                             sound: &Option<&str>,
-                             delivery_date: f64)
-                             -> NotificationResult<()> {
-    if Utc::now().timestamp() as f64 >= delivery_date {
-        Err(ErrorKind::NotificationError(notification_error::ErrorKind::ScheduleInThePast).into())
-    } else {
-        let mut use_sound: &str = "_mute";
-        if sound.is_some() {
-            if check_sound(sound.unwrap()) {
-                use_sound = sound.unwrap();
-            }
-        }
-        unsafe {
-            if sys::scheduleNotification(NSString::from_str(title).deref(),
-                                         NSString::from_str(subtitle.unwrap_or("")).deref(),
-                                         NSString::from_str(message).deref(),
-                                         NSString::from_str(use_sound).deref(),
-                                         delivery_date) {
-                Ok(())
-            } else {
-                Err(ErrorKind::NotificationError(notification_error::ErrorKind::UnableToSchedule).into())
-            }
-        }
+pub fn schedule_notification(
+    title: &str,
+    subtitle: &Option<&str>,
+    message: &str,
+    sound: &Option<&str>,
+    delivery_date: f64,
+) -> NotificationResult<()> {
+    ensure!(
+        Utc::now().timestamp() as f64 >= delivery_date,
+        NotificationError::ScheduleInThePast
+    );
+
+    let use_sound = match sound {
+        Some(sound) if check_sound(sound) => sound,
+        _ => "_mute",
+    };
+    unsafe {
+        ensure!(
+            sys::scheduleNotification(
+                NSString::from_str(title).deref(),
+                NSString::from_str(subtitle.unwrap_or("")).deref(),
+                NSString::from_str(message).deref(),
+                NSString::from_str(use_sound).deref(),
+                delivery_date,
+            ),
+            NotificationError::UnableToSchedule
+        );
+        Ok(())
     }
 }
 
@@ -98,26 +100,28 @@ pub fn schedule_notification(title: &str,
 /// // daliver a silent notification
 /// let _ = send_notification("Title", &None, "This is the body", &None).unwrap();
 /// ```
-pub fn send_notification(title: &str,
-                         subtitle: &Option<&str>,
-                         message: &str,
-                         sound: &Option<&str>)
-                         -> NotificationResult<()> {
-    let mut use_sound: &str = "_mute";
-    if sound.is_some() {
-        if check_sound(sound.unwrap()) {
-            use_sound = sound.unwrap();
-        }
-    }
+pub fn send_notification(
+    title: &str,
+    subtitle: &Option<&str>,
+    message: &str,
+    sound: &Option<&str>,
+) -> NotificationResult<()> {
+    let use_sound = match sound {
+        Some(sound) if check_sound(sound) => sound,
+        _ => "_mute",
+    };
+
     unsafe {
-        if sys::sendNotification(NSString::from_str(title).deref(),
-                                 NSString::from_str(subtitle.unwrap_or("")).deref(),
-                                 NSString::from_str(message).deref(),
-                                 NSString::from_str(use_sound).deref()) {
-            Ok(())
-        } else {
-            Err(ErrorKind::NotificationError(notification_error::ErrorKind::UnableToDeliver).into())
-        }
+        ensure!(
+            sys::sendNotification(
+                NSString::from_str(title).deref(),
+                NSString::from_str(subtitle.unwrap_or("")).deref(),
+                NSString::from_str(message).deref(),
+                NSString::from_str(use_sound).deref()
+            ),
+            NotificationError::UnableToDeliver
+        );
+        Ok(())
     }
 }
 
@@ -132,43 +136,36 @@ pub fn get_bundle_identifier(app_name: &str) -> Option<String> {
     unsafe {
         sys::getBundleIdentifier(NSString::from_str(app_name).deref()) // *const NSString
             .as_ref() // Option<NSString>
-            .map(|nstr| nstr.as_str().to_owned())
+            .map(NSString::as_str)
+            .map(String::from)
     }
 }
 
 /// Set the application which delivers or schedules a notification
 pub fn set_application(bundle_ident: &str) -> NotificationResult<()> {
     unsafe {
-        if APPLICATION_SET {
-            Err(ErrorKind::ApplicationError(applications_error::ErrorKind::AlreadySet).into())
-        } else {
-            APPLICATION_SET = true;
-            if sys::setApplication(NSString::from_str(bundle_ident).deref()) {
-                Ok(())
-            } else {
-                Err(ErrorKind::ApplicationError(applications_error::ErrorKind::CouldNotSet).into())
-            }
-        }
+        ensure!(!APPLICATION_SET, ApplicationError::AlreadySet);
+        APPLICATION_SET = true;
+        ensure!(
+            sys::setApplication(NSString::from_str(bundle_ident).deref()),
+            ApplicationError::CouldNotSet
+        );
+        Ok(())
     }
 }
 
 fn check_sound(sound_name: &str) -> bool {
-    let mut file_exists: bool = false;
-    let mut sound_paths: Vec<PathBuf> = vec![PathBuf::from("/Library/Sounds/"),
-                                             PathBuf::from("/Network/Library/Sounds/"),
-                                             PathBuf::from("/System/Library/Sounds/")];
-    match env::home_dir() {
-        Some(path) => {
-            let new_path = PathBuf::from(path).join("/Library/Sounds/");
-            sound_paths.insert(0, new_path);
-        }
-        None => print!("No home path found.", ),
-    }
-    for mut check_path in sound_paths {
-        check_path.push(format!("{}.aiff",sound_name));
-        if check_path.exists() {
-            file_exists = true;
-        }
-    }
-    file_exists
+    env::home_dir()
+        .map(|path| path.join("/Library/Sounds/"))
+        .into_iter()
+        .chain(
+            [
+                "/Library/Sounds/",
+                "/Network/Library/Sounds/",
+                "/System/Library/Sounds/",
+            ].into_iter()
+                .map(PathBuf::from),
+        )
+        .map(|sound_path| sound_path.join(format!("{}.aiff", sound_name)))
+        .any(|some_path| some_path.exists())
 }
