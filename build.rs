@@ -1,7 +1,11 @@
-extern crate gcc;
+extern crate cc;
 
 fn main() {
     if cfg!(target_os = "macos") {
-        gcc::Config::new().file("objc/notify.m").flag("-fmodules").compile("libnotify.a");
+        cc::Build::new()
+            .file("objc/notify.m")
+            .flag("-fmodules")
+            .warnings(false)
+            .compile("notify");
     }
 }

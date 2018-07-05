@@ -22,4 +22,4 @@ chrono = "0.4.0"
 failure = "0.1.1"
 
 [build-dependencies]
-gcc = "0.3.45"
+cc = "1.0.17"
