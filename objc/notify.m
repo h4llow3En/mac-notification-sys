@@ -39,8 +39,8 @@ bool scheduleNotification(NSString *title, NSString *subtitle, NSString *message
                 if (![sound isEqualToString:@"_mute"]) {
                         note.soundName = sound;
                 }
-
                 [nc scheduleNotification:note];
+                [NSThread sleepForTimeInterval:0.1f];
                 return YES;
         }
 }
@@ -68,9 +68,7 @@ bool sendNotification(NSString *title, NSString *subtitle, NSString *message, NS
                 }
                 [nc deliverNotification:note];
 
-                while (ncDelegate.keepRunning) {
-                        [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.1]];
-                }
+                [NSThread sleepForTimeInterval:0.1f];
                 return YES;
         }
 }
