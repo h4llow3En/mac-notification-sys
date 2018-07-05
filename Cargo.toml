@@ -18,7 +18,6 @@ build = "build.rs"
 
 [dependencies]
 objc-foundation = "0.1.1"
-error-chain = "0.10.0"
 chrono = "0.4.0"
 failure = "0.1.1"
 

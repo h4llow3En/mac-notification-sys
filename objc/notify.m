@@ -59,7 +59,7 @@ bool sendNotification(NSString *title, NSString *subtitle, NSString *message, NS
 
                 NSUserNotification *note = [[NSUserNotification alloc] init];
                 note.title = title;
-                if(![subtitle isEqualToString:@""]) {
+                if (![subtitle isEqualToString:@""]) {
                         note.subtitle = subtitle;
                 }
                 note.informativeText = message;
