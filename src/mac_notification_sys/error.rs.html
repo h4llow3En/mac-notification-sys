@@ -1,49 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="rustdoc">
-    <meta name="description" content="Source to the Rust file `src/error.rs`.">
-    <meta name="keywords" content="rust, rustlang, rust-lang">
-
-    <title>error.rs.html -- source</title>
-
-    <link rel="stylesheet" type="text/css" href="../../normalize.css">
-    <link rel="stylesheet" type="text/css" href="../../rustdoc.css">
-    <link rel="stylesheet" type="text/css" href="../../main.css">
-    
-
-    
-    
-</head>
-<body class="rustdoc source">
-    <!--[if lte IE 8]>
-    <div class="warning">
-        This old browser is unsupported and will most likely display funky
-        things.
-    </div>
-    <![endif]-->
-
-    
-
-    <nav class="sidebar">
-        
-        
-    </nav>
-
-    <nav class="sub">
-        <form class="search-form js-only">
-            <div class="search-container">
-                <input class="search-input" name="search"
-                       autocomplete="off"
-                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
-                       type="search">
-            </div>
-        </form>
-    </nav>
-
-    <section id='main' class="content"><pre class="line-numbers"><span id="1"> 1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source to the Rust file `src/error.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>error.rs.html -- source</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css"><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script src="../../storage.js"></script></head><body class="rustdoc source"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!"><img src="../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices"></div></div><script src="../../theme.js"></script><nav class="sub"><form class="search-form js-only"><div class="search-container"><input class="search-input" name="search" autocomplete="off" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><a id="settings-menu" href="../../settings.html"><img src="../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><pre class="line-numbers"><span id="1"> 1</span>
 <span id="2"> 2</span>
 <span id="3"> 3</span>
 <span id="4"> 4</span>
@@ -72,136 +27,35 @@
 <span id="27">27</span>
 <span id="28">28</span>
 <span id="29">29</span>
-<span id="30">30</span>
-<span id="31">31</span>
-<span id="32">32</span>
-<span id="33">33</span>
-<span id="34">34</span>
-<span id="35">35</span>
-<span id="36">36</span>
-<span id="37">37</span>
-<span id="38">38</span>
-<span id="39">39</span>
-<span id="40">40</span>
-<span id="41">41</span>
-<span id="42">42</span>
-<span id="43">43</span>
-<span id="44">44</span>
-<span id="45">45</span>
-<span id="46">46</span>
-<span id="47">47</span>
-<span id="48">48</span>
-<span id="49">49</span>
 </pre><pre class="rust ">
 <span class="doccomment">//! Custom errors for mac-notification-sys.</span>
-
+<span class="kw">use</span> <span class="ident">failure</span>;
 <span class="doccomment">/// Custom Result type for mac-notification-sys.</span>
-<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">NotificationResult</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="op">=</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>;
+<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">NotificationResult</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="op">=</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">failure</span>::<span class="ident">Error</span><span class="op">&gt;</span>;
 
 <span class="doccomment">/// Errors that can occur setting the Bundle Identifier.</span>
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">applications_error</span> {
-    <span class="macro">error_chain</span><span class="macro">!</span>{
-        <span class="ident">errors</span> {
-            <span class="doccomment">/// The application name is already set.</span>
-            <span class="ident">AlreadySet</span>{
-                <span class="ident">description</span>(<span class="string">&quot;Application can only be set once.&quot;</span>)
-            }
-            <span class="doccomment">/// The application name could not be set.</span>
-            <span class="ident">CouldNotSet</span>{
-                <span class="ident">description</span>(<span class="string">&quot;Could not set application, using default \&quot;com.apple.Termial\&quot;&quot;</span>)
-            }
-        }
-    }
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Fail</span>)]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">ApplicationError</span> {
+    <span class="doccomment">/// The application name is already set.</span>
+    <span class="attribute">#[<span class="ident">fail</span>(<span class="ident">display</span> <span class="op">=</span> <span class="string">&quot;Application can only be set once.&quot;</span>)]</span>
+    <span class="ident">AlreadySet</span>,
+    <span class="doccomment">/// The application name could not be set.</span>
+    <span class="attribute">#[<span class="ident">fail</span>(<span class="ident">display</span> <span class="op">=</span> <span class="string">&quot;Could not set application, using default \&quot;com.apple.Termial\&quot;&quot;</span>)]</span>
+    <span class="ident">CouldNotSet</span>,
 }
 
 <span class="doccomment">/// Errors that can occur while interacting with the NSUserNotificationCenter.</span>
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">notification_error</span> {
-    <span class="macro">error_chain</span><span class="macro">!</span>{
-        <span class="ident">errors</span> {
-            <span class="doccomment">/// Notifications can not be scheduled in the past.</span>
-            <span class="ident">ScheduleInThePast</span> {
-                <span class="ident">description</span>(<span class="string">&quot;Can not schedule notification in the past&quot;</span>)
-            }
-
-            <span class="doccomment">/// Schedule a notification caused an error.</span>
-            <span class="ident">UnableToSchedule</span> {
-                <span class="ident">description</span>(<span class="string">&quot;Could not schedule notification&quot;</span>)
-            }
-
-            <span class="doccomment">/// Deliver a notification caused an error.</span>
-            <span class="ident">UnableToDeliver</span> {
-                <span class="ident">description</span>(<span class="string">&quot;Could not deliver notification&quot;</span>)
-            }
-        }
-    }
-}
-
-<span class="macro">error_chain</span><span class="macro">!</span> {
-    <span class="ident">links</span> {
-        <span class="ident">ApplicationError</span>(<span class="ident">applications_error</span>::<span class="ident">Error</span>, <span class="ident">applications_error</span>::<span class="ident">ErrorKind</span>) <span class="attribute">#[<span class="ident">doc</span> <span class="op">=</span> <span class="string">&quot;An error setting the application occured.&quot;</span>]</span>;
-        <span class="ident">NotificationError</span>(<span class="ident">notification_error</span>::<span class="ident">Error</span>, <span class="ident">notification_error</span>::<span class="ident">ErrorKind</span>) <span class="attribute">#[<span class="ident">doc</span> <span class="op">=</span> <span class="string">&quot;An error scheduling the notification occured.&quot;</span>]</span>;
-    }
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Fail</span>)]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">NotificationError</span> {
+    <span class="doccomment">/// Notifications can not be scheduled in the past.</span>
+    <span class="attribute">#[<span class="ident">fail</span>(<span class="ident">display</span> <span class="op">=</span> <span class="string">&quot;Can not schedule notification in the past&quot;</span>)]</span>
+    <span class="ident">ScheduleInThePast</span>,
+    <span class="doccomment">/// Schedule a notification caused an error.</span>
+    <span class="attribute">#[<span class="ident">fail</span>(<span class="ident">display</span> <span class="op">=</span> <span class="string">&quot;Could not schedule notification&quot;</span>)]</span>
+    <span class="ident">UnableToSchedule</span>,
+    <span class="doccomment">/// Deliver a notification caused an error.</span>
+    <span class="attribute">#[<span class="ident">fail</span>(<span class="ident">display</span> <span class="op">=</span> <span class="string">&quot;Could not deliver notification&quot;</span>)]</span>
+    <span class="ident">UnableToDeliver</span>,
 }
 </pre>
-</section>
-    <section id='search' class="content hidden"></section>
-
-    <section class="footer"></section>
-
-    <aside id="help" class="hidden">
-        <div>
-            <h1 class="hidden">Help</h1>
-
-            <div class="shortcuts">
-                <h2>Keyboard Shortcuts</h2>
-
-                <dl>
-                    <dt>?</dt>
-                    <dd>Show this help dialog</dd>
-                    <dt>S</dt>
-                    <dd>Focus the search field</dd>
-                    <dt>&larrb;</dt>
-                    <dd>Move up in search results</dd>
-                    <dt>&rarrb;</dt>
-                    <dd>Move down in search results</dd>
-                    <dt>&#9166;</dt>
-                    <dd>Go to active search result</dd>
-                    <dt>+</dt>
-                    <dd>Collapse/expand all sections</dd>
-                </dl>
-            </div>
-
-            <div class="infos">
-                <h2>Search Tricks</h2>
-
-                <p>
-                    Prefix searches with a type followed by a colon (e.g.
-                    <code>fn:</code>) to restrict the search to a given type.
-                </p>
-
-                <p>
-                    Accepted types are: <code>fn</code>, <code>mod</code>,
-                    <code>struct</code>, <code>enum</code>,
-                    <code>trait</code>, <code>type</code>, <code>macro</code>,
-                    and <code>const</code>.
-                </p>
-
-                <p>
-                    Search functions by type signature (e.g.
-                    <code>vec -> usize</code> or <code>* -> vec</code>)
-                </p>
-            </div>
-        </div>
-    </aside>
-
-    
-
-    <script>
-        window.rootPath = "../../";
-        window.currentCrate = "mac_notification_sys";
-    </script>
-    <script src="../../jquery.js"></script>
-    <script src="../../main.js"></script>
-    <script defer src="../../search-index.js"></script>
-</body>
-</html>
+</section><section id="search" class="content hidden"></section><section class="footer"></section><aside id="help" class="hidden"><div><h1 class="hidden">Help</h1><div class="shortcuts"><h2>Keyboard Shortcuts</h2><dl><dt><kbd>?</kbd></dt><dd>Show this help dialog</dd><dt><kbd>S</kbd></dt><dd>Focus the search field</dd><dt><kbd>↑</kbd></dt><dd>Move up in search results</dd><dt><kbd>↓</kbd></dt><dd>Move down in search results</dd><dt><kbd>↹</kbd></dt><dd>Switch tab</dd><dt><kbd>&#9166;</kbd></dt><dd>Go to active search result</dd><dt><kbd>+</kbd></dt><dd>Expand all sections</dd><dt><kbd>-</kbd></dt><dd>Collapse all sections</dd></dl></div><div class="infos"><h2>Search Tricks</h2><p>Prefix searches with a type followed by a colon (e.g. <code>fn:</code>) to restrict the search to a given type.</p><p>Accepted types are: <code>fn</code>, <code>mod</code>, <code>struct</code>, <code>enum</code>, <code>trait</code>, <code>type</code>, <code>macro</code>, and <code>const</code>.</p><p>Search functions by type signature (e.g. <code>vec -> usize</code> or <code>* -> vec</code>)</p><p>Search multiple things at once by splitting your query with comma (e.g. <code>str,u8</code> or <code>String,struct:Vec,test</code>)</p></div></div></aside><script>window.rootPath = "../../";window.currentCrate = "mac_notification_sys";</script><script src="../../aliases.js"></script><script src="../../main.js"></script><script defer src="../../search-index.js"></script></body></html>
