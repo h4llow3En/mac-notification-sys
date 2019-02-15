@@ -20,6 +20,7 @@ build = "build.rs"
 objc-foundation = "0.1.1"
 chrono = "0.4.0"
 failure = "0.1.1"
+dirs = "1.0"
 
 [build-dependencies]
 cc = "1.0.17"
