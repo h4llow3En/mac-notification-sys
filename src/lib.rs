@@ -14,7 +14,6 @@ pub mod error;
 use chrono::offset::*;
 use error::*;
 use objc_foundation::{INSString, NSString};
-use std::env;
 use std::ops::Deref;
 use std::path::PathBuf;
 
@@ -155,7 +154,7 @@ pub fn set_application(bundle_ident: &str) -> NotificationResult<()> {
 }
 
 fn check_sound(sound_name: &str) -> bool {
-    env::home_dir()
+    dirs::home_dir()
         .map(|path| path.join("/Library/Sounds/"))
         .into_iter()
         .chain(
