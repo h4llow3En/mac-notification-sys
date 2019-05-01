@@ -1,33 +1,121 @@
 //! Custom errors for mac-notification-sys.
-use failure;
+
+use std::fmt;
+use std::error;
+
 /// Custom Result type for mac-notification-sys.
-pub type NotificationResult<T> = Result<T, failure::Error>;
+pub type NotificationResult<T> = Result<T, Error>;
 
-/// Errors that can occur setting the Bundle Identifier.
-#[derive(Debug, Fail)]
-pub enum ApplicationError {
+mod application {
+    use super::*;
+    /// Errors that can occur setting the Bundle Identifier.
+    #[derive(Debug)]
+    pub enum ApplicationError {
+        /// The application name is already set.
+        AlreadySet(String),
 
-    /// The application name is already set.
-    #[fail(display = "Application '{}' can only be set once.", _0)]
-    AlreadySet(String),
+        /// The application name could not be set.
+        CouldNotSet(String),
+    }
 
-    /// The application name could not be set.
-    #[fail(display = "Could not set application '{}', using default \"com.apple.Termial\"", _0)]
-    CouldNotSet(String),
+    impl fmt::Display for ApplicationError {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            match self {
+                ApplicationError::AlreadySet(e) => write!(f, "Application '{}' can only be set once.", e),
+                ApplicationError::CouldNotSet(e) => write!(f, "Could not set application '{}', using default \"com.apple.Termial\"", e),
+            }
+        }
+    }
+
+    impl error::Error for ApplicationError { }
 }
 
-/// Errors that can occur while interacting with the NSUserNotificationCenter.
-#[derive(Debug, Fail)]
-pub enum NotificationError {
-    /// Notifications can not be scheduled in the past.
-    #[fail(display = "Can not schedule notification in the past")]
-    ScheduleInThePast,
+mod notification {
+    use super::*;
 
-    /// Schedule a notification caused an error.
-    #[fail(display = "Could not schedule notification")]
-    UnableToSchedule,
+    /// Errors that can occur while interacting with the NSUserNotificationCenter.
+    #[derive(Debug)]
+    pub enum NotificationError {
+        ScheduleInThePast,
+        UnableToSchedule,
+        UnableToDeliver,
+    }
+    impl fmt::Display for NotificationError {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            match self {
+                NotificationError::ScheduleInThePast => write!(f, "Can not schedule notification in the past"),
+                NotificationError::UnableToSchedule => write!(f, "Could not schedule notification"),
+                NotificationError::UnableToDeliver => write!(f, "Could not deliver notification"),
+            }
+        }
+    }
 
-    /// Deliver a notification caused an error.
-    #[fail(display = "Could not deliver notification")]
-    UnableToDeliver,
+    impl error::Error for NotificationError { }
+}
+
+pub use self::application::ApplicationError;
+pub use self::notification::NotificationError;
+
+/// Our local error Type
+#[derive(Debug)]
+pub enum Error {
+    /// Application related Error
+    Application(ApplicationError),
+    /// Notification related Error
+    Notification(NotificationError)
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Error::Application(e) => write!(f, "{}", e),
+            Error::Notification(e) => write!(f, "{}", e),
+        }
+    }
+}
+
+impl error::Error for Error {}
+
+impl From<ApplicationError> for Error {
+    fn from(e: ApplicationError) -> Error {
+        Error::Application(e)
+    }
+}
+
+impl From<NotificationError> for Error {
+    fn from(e: NotificationError) -> Error {
+        Error::Notification(e)
+    }
+}
+
+/// Just the usual bail macro
+#[macro_export]
+#[doc(hidden)]
+macro_rules! bail {
+    ($e:expr) => {
+        return Err($e.into());
+    };
+    ($fmt:expr, $($arg:tt)+) => {
+        return Err(format!($fmt, $($arg)+).into());
+    };
+}
+
+/// Exits a function early with an `Error` if the condition is not satisfied.
+///
+/// Similar to `assert!`, `ensure!` takes a condition and exits the function
+/// if the condition fails. Unlike `assert!`, `ensure!` returns an `Error`,
+/// it does not panic.
+#[macro_export(local_inner_macros)]
+#[doc(hidden)]
+macro_rules! ensure {
+    ($cond:expr, $e:expr) => {
+        if !($cond) {
+            bail!($e);
+        }
+    };
+    ($cond:expr, $fmt:expr, $($arg:tt)*) => {
+        if !($cond) {
+            bail!($fmt, $($arg)*);
+        }
+    };
 }

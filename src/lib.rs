@@ -7,12 +7,10 @@
 
 extern crate chrono;
 extern crate objc_foundation;
-#[macro_use]
-extern crate failure;
 pub mod error;
 
 use chrono::offset::*;
-use error::*;
+use error::{ ApplicationError, NotificationError, NotificationResult };
 use objc_foundation::{INSString, NSString};
 use std::ops::Deref;
 use std::path::PathBuf;
