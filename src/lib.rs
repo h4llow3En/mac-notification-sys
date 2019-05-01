@@ -143,11 +143,11 @@ pub fn get_bundle_identifier(app_name: &str) -> Option<String> {
 /// Set the application which delivers or schedules a notification
 pub fn set_application(bundle_ident: &str) -> NotificationResult<()> {
     unsafe {
-        ensure!(!APPLICATION_SET, ApplicationError::AlreadySet);
+        ensure!(!APPLICATION_SET, ApplicationError::AlreadySet(bundle_ident.into()));
         APPLICATION_SET = true;
         ensure!(
             sys::setApplication(NSString::from_str(bundle_ident).deref()),
-            ApplicationError::CouldNotSet
+            ApplicationError::CouldNotSet(bundle_ident.into())
         );
         Ok(())
     }
