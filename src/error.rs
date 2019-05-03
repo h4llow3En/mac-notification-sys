@@ -36,8 +36,13 @@ mod notification {
     /// Errors that can occur while interacting with the NSUserNotificationCenter.
     #[derive(Debug)]
     pub enum NotificationError {
+        /// Notifications can not be scheduled in the past.
         ScheduleInThePast,
+
+        /// Scheduling a notification caused an error.
         UnableToSchedule,
+
+        /// Delivering a notification caused an error.
         UnableToDeliver,
     }
     impl fmt::Display for NotificationError {
@@ -109,7 +114,7 @@ macro_rules! bail {
 #[doc(hidden)]
 macro_rules! ensure {
     ($cond:expr, $e:expr) => {
-        if !($cond) {
+        if ($cond) != true {
             bail!($e);
         }
     };

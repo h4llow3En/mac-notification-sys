@@ -125,7 +125,7 @@ pub fn send_notification(
 /// Search for a possible BundleIdentifier of a given appname.
 /// Defaults to "com.apple.Terminal" if no BundleIdentifier is found.
 pub fn get_bundle_identifier_or_default(app_name: &str) -> String {
-    get_bundle_identifier(app_name).unwrap_or("com.apple.Terminal".to_string())
+    get_bundle_identifier(app_name).unwrap_or_else(|| "com.apple.Terminal".to_string())
 }
 
 /// Search for a BundleIdentifier of an given appname.
@@ -160,7 +160,7 @@ fn check_sound(sound_name: &str) -> bool {
                 "/Library/Sounds/",
                 "/Network/Library/Sounds/",
                 "/System/Library/Sounds/",
-            ].into_iter()
+            ].iter()
                 .map(PathBuf::from),
         )
         .map(|sound_path| sound_path.join(format!("{}.aiff", sound_name)))
