@@ -7,12 +7,10 @@
 
 extern crate chrono;
 extern crate objc_foundation;
-#[macro_use]
-extern crate failure;
 pub mod error;
 
 use chrono::offset::*;
-use error::*;
+use error::{ ApplicationError, NotificationError, NotificationResult };
 use objc_foundation::{INSString, NSString};
 use std::ops::Deref;
 use std::path::PathBuf;
@@ -127,7 +125,7 @@ pub fn send_notification(
 /// Search for a possible BundleIdentifier of a given appname.
 /// Defaults to "com.apple.Terminal" if no BundleIdentifier is found.
 pub fn get_bundle_identifier_or_default(app_name: &str) -> String {
-    get_bundle_identifier(app_name).unwrap_or("com.apple.Terminal".to_string())
+    get_bundle_identifier(app_name).unwrap_or_else(|| "com.apple.Terminal".to_string())
 }
 
 /// Search for a BundleIdentifier of an given appname.
@@ -143,11 +141,11 @@ pub fn get_bundle_identifier(app_name: &str) -> Option<String> {
 /// Set the application which delivers or schedules a notification
 pub fn set_application(bundle_ident: &str) -> NotificationResult<()> {
     unsafe {
-        ensure!(!APPLICATION_SET, ApplicationError::AlreadySet);
+        ensure!(!APPLICATION_SET, ApplicationError::AlreadySet(bundle_ident.into()));
         APPLICATION_SET = true;
         ensure!(
             sys::setApplication(NSString::from_str(bundle_ident).deref()),
-            ApplicationError::CouldNotSet
+            ApplicationError::CouldNotSet(bundle_ident.into())
         );
         Ok(())
     }
@@ -162,7 +160,7 @@ fn check_sound(sound_name: &str) -> bool {
                 "/Library/Sounds/",
                 "/Network/Library/Sounds/",
                 "/System/Library/Sounds/",
-            ].into_iter()
+            ].iter()
                 .map(PathBuf::from),
         )
         .map(|sound_path| sound_path.join(format!("{}.aiff", sound_name)))
