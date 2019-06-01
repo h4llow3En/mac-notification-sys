@@ -109,6 +109,11 @@ pub fn send_notification(
     };
 
     unsafe {
+        if !APPLICATION_SET {
+            let bundle = get_bundle_identifier_or_default("use_default");
+            set_application(&bundle).unwrap();
+            APPLICATION_SET = true;
+        }
         ensure!(
             sys::sendNotification(
                 NSString::from_str(title).deref(),
@@ -123,9 +128,9 @@ pub fn send_notification(
 }
 
 /// Search for a possible BundleIdentifier of a given appname.
-/// Defaults to "com.apple.Terminal" if no BundleIdentifier is found.
+/// Defaults to "com.apple.Finder" if no BundleIdentifier is found.
 pub fn get_bundle_identifier_or_default(app_name: &str) -> String {
-    get_bundle_identifier(app_name).unwrap_or_else(|| "com.apple.Terminal".to_string())
+    get_bundle_identifier(app_name).unwrap_or_else(|| "com.apple.Finder".to_string())
 }
 
 /// Search for a BundleIdentifier of an given appname.

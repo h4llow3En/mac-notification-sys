@@ -12,5 +12,5 @@ fn set_application_again() {
 #[test]
 fn get_default_identifier() {
     let bundle = get_bundle_identifier_or_default("thisappdoesnotexist");
-    assert_eq!(bundle, "com.apple.Terminal");
+    assert_eq!(bundle, "com.apple.Finder");
 }
