@@ -1,6 +1,6 @@
+#import <Cocoa/Cocoa.h>
 #import <CoreServices/CoreServices.h>
 #import <Foundation/Foundation.h>
-#import <Cocoa/Cocoa.h>
 #import <objc/runtime.h>
 
 NSString* fakeBundleIdentifier = nil;
@@ -98,10 +98,10 @@ BOOL installNSBundleHook()
     [center removeDeliveredNotification:notification];
 }
 
-// Specific to the "other" button
-- (void)userNotificationCenter:(NSUserNotificationCenter *)center didDismissAlert:(NSUserNotification *)notification 
+// Specific to the close/other button
+- (void)userNotificationCenter:(NSUserNotificationCenter*)center didDismissAlert:(NSUserNotification*)notification
 {
-    self.actionData = @{@"activationType" : @"otherClicked", @"activationValue" : notification.otherButtonTitle};
+    self.actionData = @{@"activationType" : @"closeClicked", @"activationValue" : notification.otherButtonTitle};
 
     // Stop running after interacting with the notification
     self.keepRunning = NO;

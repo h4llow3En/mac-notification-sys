@@ -48,38 +48,68 @@ mod sys {
 }
 
 /// TODO: DOCUMENTATION
+pub enum MainButton<'a> {
+    /// TODO: DOCUMENTATION
+    SingleAction(&'a str),
+    /// TODO: DOCUMENTATION
+    DropdownActions(&'a str, &'a [&'a str]),
+}
+
+/// TODO: DOCUMENTATION
 pub struct NotificationOptions<'a> {
     /// TODO: DOCUMENTATION
-    pub action_button_title: Option<&'a str>,
+    pub main_button: Option<MainButton<'a>>,
     /// TODO: DOCUMENTATION
-    pub other_button_title: Option<&'a str>,
-
+    pub close_button: Option<&'a str>,
     /// TODO: DOCUMENTATION
     pub app_icon: Option<&'a str>,
+    /// TODO: DOCUMENTATION
+    pub content_image: Option<&'a str>,
+    /// TODO: DOCUMENTATION
+    pub group_id: Option<&'a str>,
 }
 
 impl<'a> NotificationOptions<'a> {
     /// TODO: Documentation
     pub fn default() -> NotificationOptions<'a> {
         NotificationOptions {
-            action_button_title: None,
-            other_button_title: None,
+            main_button: None,
+            close_button: None,
             app_icon: None,
+            content_image: None,
+            group_id: None,
         }
     }
     /// TODO: Documentation
     pub fn to_dictionary(&self) -> Id<NSDictionary<NSString, NSString>> {
-            let keys = &[
-                &*NSString::from_str("actionButtonTitle"),
-                &*NSString::from_str("otherButtonTitle"),
-                &*NSString::from_str("appIcon"),
-            ];
-            let vals = vec![
-                NSString::from_str(self.action_button_title.unwrap_or("")),
-                NSString::from_str(self.other_button_title.unwrap_or("")),
-                NSString::from_str(self.app_icon.unwrap_or("")),
-            ];
-            NSDictionary::from_keys_and_objects(keys, vals)
+        let keys = &[
+            &*NSString::from_str("mainButtonLabel"),
+            &*NSString::from_str("actions"),
+            &*NSString::from_str("closeButtonLabel"),
+            &*NSString::from_str("appIcon"),
+            &*NSString::from_str("contentImage"),
+            &*NSString::from_str("groupID"),
+        ];
+        let (main_button_label, actions): (&str, &[&str]) = match &self.main_button {
+            Some(main_button) => match main_button {
+                MainButton::SingleAction(main_button_label) => (main_button_label, &[]),
+                MainButton::DropdownActions(main_button_label, actions) => {
+                    (main_button_label, actions)
+                }
+            },
+            None => ("", &[]),
+        };
+
+        let vals = vec![
+            NSString::from_str(main_button_label),
+            // TODO: Find a way to support NSArray as a NSDictionary Value rather than JUST NSString so I don't have to convert array to string and back
+            NSString::from_str(&actions.join(",")),
+            NSString::from_str(self.close_button.unwrap_or("")),
+            NSString::from_str(self.app_icon.unwrap_or("")),
+            NSString::from_str(self.content_image.unwrap_or("")),
+            NSString::from_str(self.group_id.unwrap_or("")),
+        ];
+        NSDictionary::from_keys_and_objects(keys, vals)
     }
 }
 
@@ -87,47 +117,44 @@ impl<'a> NotificationOptions<'a> {
 enum NotificationResponse {
     None,
     ActionButton(String),
-    OtherButton(String),
+    CloseButton(String),
     Clicked,
-    Replied(String)
+    Replied(String),
 }
 
 impl NotificationResponse {
     fn from_dictionary(dictionary: Id<NSDictionary<NSString, NSString>>) -> Self {
         let dictionary = dictionary.deref();
 
-        let activation_type = match dictionary.object_for(NSString::from_str("activationType").deref()) {
-            Some(str) => Some(str.deref().as_str().to_owned()),
-            None => None
-        };
+        let activation_type =
+            match dictionary.object_for(NSString::from_str("activationType").deref()) {
+                Some(str) => Some(str.deref().as_str().to_owned()),
+                None => None,
+            };
 
         match activation_type.as_deref() {
-            Some("actionClicked") => NotificationResponse::ActionButton(match dictionary.object_for(NSString::from_str("activationValue").deref()) {
-                Some(str) => str.deref().as_str().to_owned(),
-                None => String::from("")
-            }),
-            Some("otherClicked") => NotificationResponse::OtherButton(match dictionary.object_for(NSString::from_str("activationValue").deref()) {
-                Some(str) => str.deref().as_str().to_owned(),
-                None => String::from("")
-            }),
-            Some("replied") => NotificationResponse::Replied(match dictionary.object_for(NSString::from_str("activationValue").deref()) {
-                Some(str) => str.deref().as_str().to_owned(),
-                None => String::from("")
-            }),
+            Some("actionClicked") => NotificationResponse::ActionButton(
+                match dictionary.object_for(NSString::from_str("activationValue").deref()) {
+                    Some(str) => str.deref().as_str().to_owned(),
+                    None => String::from(""),
+                },
+            ),
+            Some("closeClicked") => NotificationResponse::CloseButton(
+                match dictionary.object_for(NSString::from_str("activationValue").deref()) {
+                    Some(str) => str.deref().as_str().to_owned(),
+                    None => String::from(""),
+                },
+            ),
+            Some("replied") => NotificationResponse::Replied(
+                match dictionary.object_for(NSString::from_str("activationValue").deref()) {
+                    Some(str) => str.deref().as_str().to_owned(),
+                    None => String::from(""),
+                },
+            ),
             Some("contentsClicked") => NotificationResponse::Clicked,
             Some(_) => NotificationResponse::None,
-            None => NotificationResponse::None
+            None => NotificationResponse::None,
         }
-
-        /*
-        NotificationResponse {
-            activation_type: 
-            activation_value: match dictionary.object_for(NSString::from_str("activationValue").deref()) {
-                Some(str) => Some(str.deref().as_str().to_owned()),
-                None => None
-            },
-        }
-        */
     }
 }
 
@@ -186,7 +213,7 @@ pub fn schedule_notification(
 ///
 /// ```no_run
 /// # use mac_notification_sys::*;
-/// // daliver a silent notification
+/// // deliver a silent notification
 /// let _ = send_notification("Title", &None, "This is the body", &None).unwrap();
 /// ```
 pub fn send_notification(
@@ -194,7 +221,7 @@ pub fn send_notification(
     subtitle: &Option<&str>,
     message: &str,
     sound: &Option<&str>,
-    options: &Option<NotificationOptions>, //&Option<HashMap<&str, &str>>
+    options: &Option<NotificationOptions>,
 ) -> NotificationResult<()> {
     let use_sound = match sound {
         Some(sound) if check_sound(sound) => sound,
@@ -203,44 +230,8 @@ pub fn send_notification(
 
     let options = match options {
         Some(options) => options.to_dictionary(),
-        None => NotificationOptions::default().to_dictionary()
+        None => NotificationOptions::default().to_dictionary(),
     };
-
-    /*
-    REAL
-    let options = {
-        let keys = &[&*NSString::from_str("hello")];
-        let vals = match options {
-            Some(options) => {
-                vec![NSString::from_str(&options.hello)]
-            }
-            None => {
-                vec![NSString::from_str("")]
-            }
-        };
-        NSDictionary::from_keys_and_objects(keys, vals)
-    };
-    */
-
-    /*
-
-    let new_options = {
-        let (keys, vals) = match options {
-            Some(options) => (
-                // &[&*NSString::from_str("hello")],
-                vec![NSString::from_str("hello")],
-                vec![NSString::from_str(&options.hello)],
-            ),
-            None => {
-                //let keys: &[&NSString] = &[&*NSString::from_str("")];
-                //let vals = Vec::new();
-                (Vec::new(), Vec::new())
-            },
-        };
-        NSDictionary::from_keys_and_objects(&keys, vals)
-    };
-
-    */
 
     unsafe {
         if !APPLICATION_SET {
@@ -248,66 +239,24 @@ pub fn send_notification(
             set_application(&bundle).unwrap();
             APPLICATION_SET = true;
         }
-        //ensure!(
-            let dictionary_response = sys::sendNotification(
-                NSString::from_str(title).deref(),
-                NSString::from_str(subtitle.unwrap_or("")).deref(),
-                NSString::from_str(message).deref(),
-                NSString::from_str(use_sound).deref(),
-                options.deref() /*
-                                    match options {
-                                        Some(options) => {
-                                            let keys = &[*NSString::from_str("hello").deref()];
-                                            let values = vec![NSString::from_str(&options.hello).deref()];
-                                            *NSDictionary::from_keys_and_objects(keys, values).deref()
-                                        },
-                                        None => {
-                                            let keys: &[&NSString] = &[];
-                                            *NSDictionary::from_keys_and_objects(keys, vec![]).deref()
-                                        }
-                                    }
-                                    */
-                                    /*
-                                    match options {
-                                        Some(options) => {
-                                            &options.to_dictionary()
-                                        },/*{
+        let dictionary_response = sys::sendNotification(
+            NSString::from_str(title).deref(),
+            NSString::from_str(subtitle.unwrap_or("")).deref(),
+            NSString::from_str(message).deref(),
+            NSString::from_str(use_sound).deref(),
+            options.deref(),
+        );
+        ensure!(
+            dictionary_response
+                .deref()
+                .object_for(NSString::from_str("error").deref())
+                .is_none(),
+            NotificationError::UnableToDeliver
+        );
 
-                                            let mut v = Vec::new();
-                                            for key in options.keys() {
-                                                v.push(NSString::from_str(key.clone()));
-                                            }
+        let response = NotificationResponse::from_dictionary(dictionary_response);
 
-                                            NSDictionary::from_keys_and_objects(
-                                                &v.iter().map(|s| s.deref()).collect::<Vec<&NSString>>(),
-                                                // &options.keys().map(|s| NSString::from_str(s.clone()).deref()).collect::<Vec<&NSString>>(),
-                                                options.values().map(|s| NSString::from_str(*s)).collect(),
-                                            )
-                                        .deref()
-                                    },*/
-                                        None => {
-                                            let keys: &[&NSString] = &[];
-                                            NSDictionary::from_keys_and_objects(keys, vec![]).deref()
-                                        },
-                                    } */
-            );
-            ensure!(dictionary_response.deref().object_for(NSString::from_str("error").deref()).is_none(), NotificationError::UnableToDeliver);
-            //,
-            //NotificationError::UnableToDeliver
-            
-            let response = NotificationResponse::from_dictionary(dictionary_response);
-
-            println!("{:?}", response);
-
-            /*
-            let zip = x.deref().keys_and_objects();
-            for (k, v) in zip.0.iter().zip(zip.1.iter()) {
-                println!("{:?} {:?}", k.deref().as_str(), v.deref().as_str());
-            }
-            */
-
-            // println!("{:?}", v);
-        //);
+        println!("{:?}", response);
         Ok(())
     }
 }

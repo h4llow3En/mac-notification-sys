@@ -22,12 +22,26 @@ BOOL setApplication(NSString* newbundleIdentifier)
 
 NSImage* getImageFromURL(NSString* url)
 {
-    NSURL *imageURL = [NSURL URLWithString:url];
-    if([[imageURL scheme] length] == 0){
+    NSURL* imageURL = [NSURL URLWithString:url];
+    if ([[imageURL scheme] length] == 0)
+    {
         // Prefix 'file://' if no scheme
         imageURL = [NSURL fileURLWithPath:url];
     }
     return [[NSImage alloc] initWithContentsOfURL:imageURL];
+}
+
+void removeNotificationWithGroupID(NSString* groupID)
+{
+    NSUserNotificationCenter* center = [NSUserNotificationCenter defaultUserNotificationCenter];
+    for (NSUserNotification* userNotification in center.deliveredNotifications)
+    {
+        if ([@"ALL" isEqualToString:groupID] || [userNotification.userInfo[@"groupID"] isEqualToString:groupID])
+        {
+            [center removeDeliveredNotification:userNotification];
+            [center removeDeliveredNotification:userNotification];
+        }
+    }
 }
 
 // scheduleNotification(title: &str, subtitle: &str message: &str, sound: &str, f64) -> NotificationResult<()>
@@ -45,19 +59,19 @@ bool scheduleNotification(NSString* title, NSString* subtitle, NSString* message
         ncDelegate.keepRunning = YES;
         nc.delegate = ncDelegate;
 
-        NSUserNotification* note = [[NSUserNotification alloc] init];
-        note.title = title;
+        NSUserNotification* userNotification = [[NSUserNotification alloc] init];
+        userNotification.title = title;
         if (![subtitle isEqualToString:@""])
         {
-            note.subtitle = subtitle;
+            userNotification.subtitle = subtitle;
         }
-        note.informativeText = message;
-        note.deliveryDate = scheduleTime;
+        userNotification.informativeText = message;
+        userNotification.deliveryDate = scheduleTime;
         if (![sound isEqualToString:@"_mute"])
         {
-            note.soundName = sound;
+            userNotification.soundName = sound;
         }
-        [nc scheduleNotification:note];
+        [nc scheduleNotification:userNotification];
         [NSThread sleepForTimeInterval:0.1f];
         return YES;
     }
@@ -71,7 +85,13 @@ NSDictionary* sendNotification(NSString* title, NSString* subtitle, NSString* me
         if (!installNSBundleHook())
         {
             // TODO: Could potentially have different error messages
-            return @{ @"error": @"" };
+            return @{@"error" : @""};
+        }
+
+        // Remove earlier notification with the same group ID
+        if (options[@"groupID"] && ![options[@"groupId"] isEqualToString:@""])
+        {
+            removeNotificationWithGroupID(options[@"groupID"]);
         }
 
         NSUserNotificationCenter* nc = [NSUserNotificationCenter defaultUserNotificationCenter];
@@ -79,59 +99,77 @@ NSDictionary* sendNotification(NSString* title, NSString* subtitle, NSString* me
         ncDelegate.keepRunning = YES;
         nc.delegate = ncDelegate;
 
-        NSUserNotification* note = [[NSUserNotification alloc] init];
+        NSUserNotification* userNotification = [[NSUserNotification alloc] init];
 
         // Basic text
-        note.title = title;
+        userNotification.title = title;
         if (![subtitle isEqualToString:@""])
         {
-            note.subtitle = subtitle;
+            userNotification.subtitle = subtitle;
         }
-        note.informativeText = message;
+        userNotification.informativeText = message;
 
         // Notification sound
         if (![sound isEqualToString:@"_mute"])
         {
-            note.soundName = sound;
+            userNotification.soundName = sound;
         }
 
-        // Main action button
-        if (options[@"actionButtonTitle"] && ![options[@"actionButtonTitle"] isEqualToString:@""]) {
-            [note setValue:@YES forKey:@"_showsButtons"];
-            note.hasActionButton = YES;
-            note.actionButtonTitle = options[@"actionButtonTitle"];
-        }
-        else {
-            note.hasActionButton = NO;
+        // Main Actions Button (defaults to "Show")
+        if (options[@"mainButtonLabel"] && ![options[@"mainButtonLabel"] isEqualToString:@""])
+        {
+            userNotification.actionButtonTitle = options[@"mainButtonLabel"];
+            userNotification.hasActionButton = 1;
         }
 
-        // Other button (defaults to "Cancel")
-        if (options[@"otherButtonTitle"] && ![options[@"otherButtonTitle"] isEqualToString:@""]) {
-            [note setValue:@YES forKey:@"_showsButtons"];
-            note.otherButtonTitle = options[@"otherButtonTitle"];
+        // Dropdown actions
+        if (options[@"actions"] && ![options[@"actions"] isEqualToString:@""])
+        {
+            [userNotification setValue:@YES forKey:@"_showsButtons"];
+
+            NSArray* myActions = [options[@"actions"] componentsSeparatedByString:@","];
+
+            if (myActions.count > 1)
+            {
+                [userNotification setValue:@YES forKey:@"_alwaysShowAlternateActionMenu"];
+                [userNotification setValue:myActions forKey:@"_alternateActionButtonTitles"];
+            }
         }
-        
+
+        // Close/Other button (defaults to "Cancel")
+        if (options[@"closeButtonLabel"] && ![options[@"closeButtonLabel"] isEqualToString:@""])
+        {
+            [userNotification setValue:@YES forKey:@"_showsButtons"];
+            userNotification.otherButtonTitle = options[@"closeButtonLabel"];
+        }
+
         // Reply to the notification with a text field
         if (options[@"response"])
         {
-            note.hasReplyButton = 1;
-            note.responsePlaceholder = options[@"responsePlaceholder"];
+            userNotification.hasReplyButton = 1;
+            userNotification.responsePlaceholder = options[@"responsePlaceholder"];
             NSLog(@"%@", options[@"responsePlaceholder"]);
         }
 
         // Change the icon of the app in the notification
-        if(options[@"appIcon"]){
+        if (options[@"appIcon"])
+        {
             NSImage* icon = getImageFromURL(options[@"appIcon"]);
             // replacement app icon
-            [note setValue:icon forKey:@"_identityImage"];
-            [note setValue:@(false) forKey:@"_identityImageHasBorder"];
+            [userNotification setValue:icon forKey:@"_identityImage"];
+            [userNotification setValue:@(false) forKey:@"_identityImageHasBorder"];
+        }
+        // Change the additional content image
+        if (options[@"contentImage"])
+        {
+            userNotification.contentImage = getImageFromURL(options[@"contentImage"]);
         }
 
-        // [note setValue:@(true) forKey:@"_clearable"];
+        // [userNotification setValue:@(true) forKey:@"_clearable"];
 
         // TODO: Add more functionality like https://github.com/vjeantet/alerter/blob/master/alerter/AppDelegate.m
 
-        [nc deliverNotification:note];
+        [nc deliverNotification:userNotification];
 
         [NSThread sleepForTimeInterval:0.1f];
 
