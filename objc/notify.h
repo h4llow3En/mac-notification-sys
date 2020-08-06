@@ -110,3 +110,27 @@ BOOL installNSBundleHook()
     [center removeDeliveredNotification:notification];
 }
 @end
+
+NSImage* getImageFromURL(NSString* url)
+{
+    NSURL* imageURL = [NSURL URLWithString:url];
+    if ([[imageURL scheme] length] == 0)
+    {
+        // Prefix 'file://' if no scheme
+        imageURL = [NSURL fileURLWithPath:url];
+    }
+    return [[NSImage alloc] initWithContentsOfURL:imageURL];
+}
+
+void removeNotificationWithGroupID(NSString* groupID)
+{
+    NSUserNotificationCenter* center = [NSUserNotificationCenter defaultUserNotificationCenter];
+    for (NSUserNotification* userNotification in center.deliveredNotifications)
+    {
+        if ([@"ALL" isEqualToString:groupID] || [userNotification.userInfo[@"groupID"] isEqualToString:groupID])
+        {
+            [center removeDeliveredNotification:userNotification];
+            [center removeDeliveredNotification:userNotification];
+        }
+    }
+}

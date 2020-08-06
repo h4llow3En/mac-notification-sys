@@ -9,9 +9,6 @@
 #![cfg(target_os = "macos")]
 #![allow(improper_ctypes)]
 
-extern crate chrono;
-extern crate objc_foundation;
-extern crate objc_id;
 pub mod error;
 
 use chrono::offset::*;
@@ -28,18 +25,10 @@ mod sys {
     use objc_id::Id;
     #[link(name = "notify")]
     extern "C" {
-        pub fn scheduleNotification(
-            title: *const NSString,
-            subtitle: *const NSString,
-            message: *const NSString,
-            sound: *const NSString,
-            deliveryDate: f64,
-        ) -> bool;
         pub fn sendNotification(
             title: *const NSString,
             subtitle: *const NSString,
             message: *const NSString,
-            sound: *const NSString,
             options: *const NSDictionary<NSString, NSString>,
         ) -> Id<NSDictionary<NSString, NSString>>;
         pub fn setApplication(newbundleIdentifier: *const NSString) -> bool;
@@ -53,6 +42,8 @@ pub enum MainButton<'a> {
     SingleAction(&'a str),
     /// TODO: DOCUMENTATION
     DropdownActions(&'a str, &'a [&'a str]),
+    /// TODO: DOCUMENTATION
+    Response(&'a str),
 }
 
 /// TODO: DOCUMENTATION
@@ -67,6 +58,10 @@ pub struct NotificationOptions<'a> {
     pub content_image: Option<&'a str>,
     /// TODO: DOCUMENTATION
     pub group_id: Option<&'a str>,
+    /// TODO: DOCUMENTATION
+    pub delivery_date: Option<(f64, bool)>,
+    /// TODO: DOCUMENTATION
+    pub sound: Option<&'a str>,
 }
 
 impl<'a> NotificationOptions<'a> {
@@ -78,10 +73,13 @@ impl<'a> NotificationOptions<'a> {
             app_icon: None,
             content_image: None,
             group_id: None,
+            delivery_date: None,
+            sound: None,
         }
     }
     /// TODO: Documentation
     pub fn to_dictionary(&self) -> Id<NSDictionary<NSString, NSString>> {
+        // TODO: If possible, find a way to simplify this so I don't have to manually convert struct to NSDictionary
         let keys = &[
             &*NSString::from_str("mainButtonLabel"),
             &*NSString::from_str("actions"),
@@ -89,16 +87,22 @@ impl<'a> NotificationOptions<'a> {
             &*NSString::from_str("appIcon"),
             &*NSString::from_str("contentImage"),
             &*NSString::from_str("groupID"),
+            &*NSString::from_str("response"),
+            &*NSString::from_str("deliveryDate"),
+            &*NSString::from_str("synchronous"),
+            &*NSString::from_str("sound"),
         ];
-        let (main_button_label, actions): (&str, &[&str]) = match &self.main_button {
-            Some(main_button) => match main_button {
-                MainButton::SingleAction(main_button_label) => (main_button_label, &[]),
-                MainButton::DropdownActions(main_button_label, actions) => {
-                    (main_button_label, actions)
-                }
-            },
-            None => ("", &[]),
-        };
+        let (main_button_label, actions, is_response): (&str, &[&str], bool) =
+            match &self.main_button {
+                Some(main_button) => match main_button {
+                    MainButton::SingleAction(main_button_label) => (main_button_label, &[], false),
+                    MainButton::DropdownActions(main_button_label, actions) => {
+                        (main_button_label, actions, false)
+                    }
+                    MainButton::Response(response) => (response, &[], true),
+                },
+                None => ("", &[], false),
+            };
 
         let vals = vec![
             NSString::from_str(main_button_label),
@@ -107,18 +111,37 @@ impl<'a> NotificationOptions<'a> {
             NSString::from_str(self.close_button.unwrap_or("")),
             NSString::from_str(self.app_icon.unwrap_or("")),
             NSString::from_str(self.content_image.unwrap_or("")),
-            NSString::from_str(self.group_id.unwrap_or("")),
+            NSString::from_str(self.group_id.unwrap_or_default()),
+            NSString::from_str(if is_response { "yes" } else { "" }),
+            NSString::from_str(&match self.delivery_date {
+                Some((delivery_date, _)) => delivery_date.to_string(),
+                _ => String::new(),
+            }),
+            NSString::from_str(match self.delivery_date {
+                Some((_, true)) => "yes",
+                _ => "",
+            }),
+            NSString::from_str(match self.sound {
+                Some(sound) if check_sound(sound) => sound,
+                _ => "_mute",
+            }),
         ];
         NSDictionary::from_keys_and_objects(keys, vals)
     }
 }
 
+/// TODO: DOCUMENTATION
 #[derive(Debug)]
-enum NotificationResponse {
+pub enum NotificationResponse {
+    /// TODO: DOCUMENTATION
     None,
+    /// TODO: DOCUMENTATION
     ActionButton(String),
+    /// TODO: DOCUMENTATION
     CloseButton(String),
+    /// TODO: DOCUMENTATION
     Clicked,
+    /// TODO: DOCUMENTATION
     Replied(String),
 }
 
@@ -158,53 +181,6 @@ impl NotificationResponse {
     }
 }
 
-/// Schedules a new notification in the NotificationCenter
-///
-/// Returns a `NotificationError` if a notification could not be scheduled
-/// or is scheduled in the past
-///
-/// # Example:
-///
-/// ```ignore
-/// extern crate chrono;
-/// # use mac_notification_sys::*;
-/// use chrono::offset::*;
-///
-/// // schedule a notification in 5 seconds
-/// let _ = schedule_notification("Title", &None, "This is the body", &Some("Ping"),
-///                               Utc::now().timestamp() as f64 + 5.).unwrap();
-/// ```
-pub fn schedule_notification(
-    title: &str,
-    subtitle: &Option<&str>,
-    message: &str,
-    sound: &Option<&str>,
-    delivery_date: f64,
-) -> NotificationResult<()> {
-    ensure!(
-        delivery_date >= Utc::now().timestamp() as f64,
-        NotificationError::ScheduleInThePast
-    );
-
-    let use_sound = match sound {
-        Some(sound) if check_sound(sound) => sound,
-        _ => "_mute",
-    };
-    unsafe {
-        ensure!(
-            sys::scheduleNotification(
-                NSString::from_str(title).deref(),
-                NSString::from_str(subtitle.unwrap_or("")).deref(),
-                NSString::from_str(message).deref(),
-                NSString::from_str(use_sound).deref(),
-                delivery_date,
-            ),
-            NotificationError::UnableToSchedule
-        );
-        Ok(())
-    }
-}
-
 /// Delivers a new notification
 ///
 /// Returns a `NotificationError` if a notification could not be delivered
@@ -214,18 +190,21 @@ pub fn schedule_notification(
 /// ```no_run
 /// # use mac_notification_sys::*;
 /// // deliver a silent notification
-/// let _ = send_notification("Title", &None, "This is the body", &None).unwrap();
+/// let _ = send_notification("Title", None, "This is the body", None).unwrap();
 /// ```
 pub fn send_notification(
     title: &str,
-    subtitle: &Option<&str>,
+    subtitle: Option<&str>,
     message: &str,
-    sound: &Option<&str>,
-    options: &Option<NotificationOptions>,
-) -> NotificationResult<()> {
-    let use_sound = match sound {
-        Some(sound) if check_sound(sound) => sound,
-        _ => "_mute",
+    options: Option<NotificationOptions>,
+) -> NotificationResult<NotificationResponse> {
+    if let Some(options) = &options {
+        if let Some((delivery_date, _)) = options.delivery_date {
+            ensure!(
+                delivery_date >= Utc::now().timestamp() as f64,
+                NotificationError::ScheduleInThePast
+            );
+        }
     };
 
     let options = match options {
@@ -243,7 +222,6 @@ pub fn send_notification(
             NSString::from_str(title).deref(),
             NSString::from_str(subtitle.unwrap_or("")).deref(),
             NSString::from_str(message).deref(),
-            NSString::from_str(use_sound).deref(),
             options.deref(),
         );
         ensure!(
@@ -256,8 +234,7 @@ pub fn send_notification(
 
         let response = NotificationResponse::from_dictionary(dictionary_response);
 
-        println!("{:?}", response);
-        Ok(())
+        Ok(response)
     }
 }
 

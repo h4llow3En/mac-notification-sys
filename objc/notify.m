@@ -20,65 +20,8 @@ BOOL setApplication(NSString* newbundleIdentifier)
     return NO;
 }
 
-NSImage* getImageFromURL(NSString* url)
-{
-    NSURL* imageURL = [NSURL URLWithString:url];
-    if ([[imageURL scheme] length] == 0)
-    {
-        // Prefix 'file://' if no scheme
-        imageURL = [NSURL fileURLWithPath:url];
-    }
-    return [[NSImage alloc] initWithContentsOfURL:imageURL];
-}
-
-void removeNotificationWithGroupID(NSString* groupID)
-{
-    NSUserNotificationCenter* center = [NSUserNotificationCenter defaultUserNotificationCenter];
-    for (NSUserNotification* userNotification in center.deliveredNotifications)
-    {
-        if ([@"ALL" isEqualToString:groupID] || [userNotification.userInfo[@"groupID"] isEqualToString:groupID])
-        {
-            [center removeDeliveredNotification:userNotification];
-            [center removeDeliveredNotification:userNotification];
-        }
-    }
-}
-
-// scheduleNotification(title: &str, subtitle: &str message: &str, sound: &str, f64) -> NotificationResult<()>
-bool scheduleNotification(NSString* title, NSString* subtitle, NSString* message, NSString* sound, double deliveryDate)
-{
-    @autoreleasepool
-    {
-        if (!installNSBundleHook())
-        {
-            return NO;
-        }
-        NSDate* scheduleTime = [NSDate dateWithTimeIntervalSince1970:deliveryDate];
-        NSUserNotificationCenter* nc = [NSUserNotificationCenter defaultUserNotificationCenter];
-        NotificationCenterDelegate* ncDelegate = [[NotificationCenterDelegate alloc] init];
-        ncDelegate.keepRunning = YES;
-        nc.delegate = ncDelegate;
-
-        NSUserNotification* userNotification = [[NSUserNotification alloc] init];
-        userNotification.title = title;
-        if (![subtitle isEqualToString:@""])
-        {
-            userNotification.subtitle = subtitle;
-        }
-        userNotification.informativeText = message;
-        userNotification.deliveryDate = scheduleTime;
-        if (![sound isEqualToString:@"_mute"])
-        {
-            userNotification.soundName = sound;
-        }
-        [nc scheduleNotification:userNotification];
-        [NSThread sleepForTimeInterval:0.1f];
-        return YES;
-    }
-}
-
-// sendNotification(title: &str, subtitle: &str, message: &str, sound: &str) -> NotificationResult<()>
-NSDictionary* sendNotification(NSString* title, NSString* subtitle, NSString* message, NSString* sound, NSDictionary* options)
+// sendNotification(title: &str, subtitle: &str, message: &str, options: NotificationOptions) -> NotificationResult<()>
+NSDictionary* sendNotification(NSString* title, NSString* subtitle, NSString* message, NSDictionary* options)
 {
     @autoreleasepool
     {
@@ -88,18 +31,21 @@ NSDictionary* sendNotification(NSString* title, NSString* subtitle, NSString* me
             return @{@"error" : @""};
         }
 
-        // Remove earlier notification with the same group ID
+        // TODO: Handle scheduled notifications removing others before they actually show up
+        // Remove previous notification with the same group ID
         if (options[@"groupID"] && ![options[@"groupId"] isEqualToString:@""])
         {
             removeNotificationWithGroupID(options[@"groupID"]);
         }
 
-        NSUserNotificationCenter* nc = [NSUserNotificationCenter defaultUserNotificationCenter];
+        NSUserNotificationCenter* notificationCenter = [NSUserNotificationCenter defaultUserNotificationCenter];
         NotificationCenterDelegate* ncDelegate = [[NotificationCenterDelegate alloc] init];
-        ncDelegate.keepRunning = YES;
-        nc.delegate = ncDelegate;
+        // By default, don't wait for actions. This is set to YES when a button/action-related option is set.
+        ncDelegate.keepRunning = NO;
+        notificationCenter.delegate = ncDelegate;
 
         NSUserNotification* userNotification = [[NSUserNotification alloc] init];
+        BOOL isScheduled = NO;
 
         // Basic text
         userNotification.title = title;
@@ -110,9 +56,24 @@ NSDictionary* sendNotification(NSString* title, NSString* subtitle, NSString* me
         userNotification.informativeText = message;
 
         // Notification sound
-        if (![sound isEqualToString:@"_mute"])
+        if (options[@"sound"] && ![options[@"sound"] isEqualToString:@""] && ![options[@"sound"] isEqualToString:@"_mute"])
         {
-            userNotification.soundName = sound;
+            userNotification.soundName = options[@"sound"];
+        }
+
+        // Delivery Date/Schedule
+        if (options[@"deliveryDate"] && ![options[@"deliveryDate"] isEqualToString:@""])
+        {
+            double deliveryDate = [options[@"deliveryDate"] doubleValue];
+            NSDate* scheduleTime = [NSDate dateWithTimeIntervalSince1970:deliveryDate];
+            userNotification.deliveryDate = scheduleTime;
+            NSLog(@"Delivery date option passed as %@ converted to %f resulting in %@", options[@"deliveryDate"], deliveryDate, scheduleTime);
+            isScheduled = YES;
+
+            if (options[@"synchronous"] && [options[@"synchronous"] isEqualToString:@"yes"])
+            {
+                ncDelegate.keepRunning = YES;
+            }
         }
 
         // Main Actions Button (defaults to "Show")
@@ -120,12 +81,14 @@ NSDictionary* sendNotification(NSString* title, NSString* subtitle, NSString* me
         {
             userNotification.actionButtonTitle = options[@"mainButtonLabel"];
             userNotification.hasActionButton = 1;
+            ncDelegate.keepRunning = YES;
         }
 
         // Dropdown actions
         if (options[@"actions"] && ![options[@"actions"] isEqualToString:@""])
         {
             [userNotification setValue:@YES forKey:@"_showsButtons"];
+            ncDelegate.keepRunning = YES;
 
             NSArray* myActions = [options[@"actions"] componentsSeparatedByString:@","];
 
@@ -139,20 +102,21 @@ NSDictionary* sendNotification(NSString* title, NSString* subtitle, NSString* me
         // Close/Other button (defaults to "Cancel")
         if (options[@"closeButtonLabel"] && ![options[@"closeButtonLabel"] isEqualToString:@""])
         {
+            ncDelegate.keepRunning = YES;
             [userNotification setValue:@YES forKey:@"_showsButtons"];
             userNotification.otherButtonTitle = options[@"closeButtonLabel"];
         }
 
         // Reply to the notification with a text field
-        if (options[@"response"])
+        if (options[@"response"] && ![options[@"response"] isEqualToString:@""])
         {
+            ncDelegate.keepRunning = YES;
             userNotification.hasReplyButton = 1;
-            userNotification.responsePlaceholder = options[@"responsePlaceholder"];
-            NSLog(@"%@", options[@"responsePlaceholder"]);
+            userNotification.responsePlaceholder = options[@"mainButtonLabel"];
         }
 
         // Change the icon of the app in the notification
-        if (options[@"appIcon"])
+        if (options[@"appIcon"] && ![options[@"appIcon"] isEqualToString:@""])
         {
             NSImage* icon = getImageFromURL(options[@"appIcon"]);
             // replacement app icon
@@ -160,16 +124,20 @@ NSDictionary* sendNotification(NSString* title, NSString* subtitle, NSString* me
             [userNotification setValue:@(false) forKey:@"_identityImageHasBorder"];
         }
         // Change the additional content image
-        if (options[@"contentImage"])
+        if (options[@"contentImage"] && ![options[@"contentImage"] isEqualToString:@""])
         {
             userNotification.contentImage = getImageFromURL(options[@"contentImage"]);
         }
 
-        // [userNotification setValue:@(true) forKey:@"_clearable"];
-
-        // TODO: Add more functionality like https://github.com/vjeantet/alerter/blob/master/alerter/AppDelegate.m
-
-        [nc deliverNotification:userNotification];
+        // Send or schedule notification
+        if (isScheduled)
+        {
+            [notificationCenter scheduleNotification:userNotification];
+        }
+        else
+        {
+            [notificationCenter deliverNotification:userNotification];
+        }
 
         [NSThread sleepForTimeInterval:0.1f];
 
@@ -178,8 +146,6 @@ NSDictionary* sendNotification(NSString* title, NSString* subtitle, NSString* me
         {
             [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.1]];
         }
-
-        NSLog(@"%@", ncDelegate.actionData);
 
         return ncDelegate.actionData;
     }
