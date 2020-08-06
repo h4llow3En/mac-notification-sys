@@ -8,7 +8,10 @@ fn main() {
         Some("Will Robinson"),
         "Run away as fast as you can",
         Some(NotificationOptions {
-            main_button: Some(MainButton::SingleAction("Click me!")),
+            main_button: Some(MainButton::DropdownActions(
+                "Dropdown",
+                &["Action 1", "Action 2"],
+            )),
             close_button: Some("Nevermind..."),
             app_icon: None,
             content_image: None,

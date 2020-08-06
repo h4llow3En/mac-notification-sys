@@ -141,6 +141,7 @@ NSDictionary* sendNotification(NSString* title, NSString* subtitle, NSString* me
 
         [NSThread sleepForTimeInterval:0.1f];
 
+        // TODO: Issue #4 mentions an issue with multithreading, perhaps there could be an overall "synchronous" option (instead of deliveryDate's synchronous section)
         // Loop/wait for a user action if needed
         while (ncDelegate.keepRunning)
         {

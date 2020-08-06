@@ -36,37 +36,147 @@ mod sys {
     }
 }
 
-/// TODO: DOCUMENTATION
+/// Possible actions accessible through the main button of the notification
 pub enum MainButton<'a> {
-    /// TODO: DOCUMENTATION
+    /// Display a single action with the given name
+    ///
+    /// # Example:
+    ///
+    /// ```no_run
+    /// # use mac_notification_sys::*;
+    /// let _ = MainButton::SingleAction("Action name");
+    /// ```
     SingleAction(&'a str),
-    /// TODO: DOCUMENTATION
+    /// Display a dropdown with the given title, with a list of actions with given names
+    ///
+    /// # Example:
+    ///
+    /// ```no_run
+    /// # use mac_notification_sys::*;
+    /// let _ = MainButton::DropdownActions("Dropdown name", &["Action 1", "Action 2"]);
+    /// ```
     DropdownActions(&'a str, &'a [&'a str]),
-    /// TODO: DOCUMENTATION
+    /// Display a text input field with the given placeholder
+    ///
+    /// # Example:
+    ///
+    /// ```no_run
+    /// # use mac_notification_sys::*;
+    /// let _ = MainButton::Response("Enter some text...");
+    /// ```
     Response(&'a str),
 }
 
-/// TODO: DOCUMENTATION
+/// Options to further customize the notification
 pub struct NotificationOptions<'a> {
-    /// TODO: DOCUMENTATION
+    /// Allow actions through a main button
+    ///
+    /// # Example:
+    ///
+    /// ```no_run
+    /// # use mac_notification_sys::*;
+    /// let _ = NotificationOptions {
+    ///     main_button: Some(MainButton::SingleAction("Main button")),
+    ///
+    ///     ..Default::default()
+    /// };
+    /// ```
     pub main_button: Option<MainButton<'a>>,
-    /// TODO: DOCUMENTATION
+    /// Display a close button with the given name
+    ///
+    /// # Example:
+    ///
+    /// ```no_run
+    /// # use mac_notification_sys::*;
+    /// let _ = NotificationOptions {
+    ///     close_button: Some("Close"),
+    ///
+    ///     ..Default::default()
+    /// };
+    /// ```
     pub close_button: Option<&'a str>,
-    /// TODO: DOCUMENTATION
+    /// Display an icon on the left side of the notification
+    ///
+    /// NOTE: The icon of the app associated to the bundle will be displayed next to the notification title
+    ///
+    /// # Example:
+    ///
+    /// ```no_run
+    /// # use mac_notification_sys::*;
+    /// let _ = NotificationOptions {
+    ///     app_icon: Some("/path/to/icon.icns"),
+    ///
+    ///     ..Default::default()
+    /// };
+    /// ```
     pub app_icon: Option<&'a str>,
-    /// TODO: DOCUMENTATION
+    /// Display an image on the right side of the notification
+    ///
+    /// # Example:
+    ///
+    /// ```no_run
+    /// # use mac_notification_sys::*;
+    /// let _ = NotificationOptions {
+    ///     content_image: Some("/path/to/image.png"),
+    ///
+    ///     ..Default::default()
+    /// };
+    /// ```
     pub content_image: Option<&'a str>,
-    /// TODO: DOCUMENTATION
+    /// Set an identifier to group multiple notifications together
+    /// Notifications in group will dismiss each other so only the latest one is displayed
+    ///
+    /// # Example:
+    ///
+    /// ```no_run
+    /// # use mac_notification_sys::*;
+    /// let _ = NotificationOptions {
+    ///     group_id: Some("my_notification_group"),
+    ///
+    ///     ..Default::default()
+    /// };
+    /// ```
     pub group_id: Option<&'a str>,
-    /// TODO: DOCUMENTATION
+    /// Schedule the notification to be delivered at a later time
+    ///
+    /// The first parameter is the time at which to schedule the notification
+    ///
+    /// The second parameter defines whether or not the notification
+    ///     should be fired synchronously (if no action is set)
+    ///
+    /// # Example:
+    ///
+    /// ```no_run
+    /// # use mac_notification_sys::*;
+    /// # use chrono::offset::*;
+    /// let stamp = Utc::now().timestamp() as f64 + 5.;
+    ///
+    /// let _ = NotificationOptions {
+    ///     // Synchronous is true, this will wait until the user
+    ///     // interacts with the notification before returning
+    ///     delivery_date: Some((stamp, true)),
+    ///
+    ///     ..Default::default()
+    /// };
+    /// ```
     pub delivery_date: Option<(f64, bool)>,
-    /// TODO: DOCUMENTATION
+    /// Play a system sound when the notification is delivered
+    ///
+    /// # Example:
+    ///
+    /// ```no_run
+    /// # use mac_notification_sys::*;
+    /// let _ = NotificationOptions {
+    ///     sound: Some("Blow"),
+    ///
+    ///     ..Default::default()
+    /// };
+    /// ```
     pub sound: Option<&'a str>,
 }
 
-impl<'a> NotificationOptions<'a> {
-    /// TODO: Documentation
-    pub fn default() -> NotificationOptions<'a> {
+impl<'a> Default for NotificationOptions<'a> {
+    fn default() -> NotificationOptions<'a> {
         NotificationOptions {
             main_button: None,
             close_button: None,
@@ -77,8 +187,11 @@ impl<'a> NotificationOptions<'a> {
             sound: None,
         }
     }
-    /// TODO: Documentation
-    pub fn to_dictionary(&self) -> Id<NSDictionary<NSString, NSString>> {
+}
+
+impl<'a> NotificationOptions<'a> {
+    /// Convert the NotificationOptions into an Objective C NSDictionary
+    fn to_dictionary(&self) -> Id<NSDictionary<NSString, NSString>> {
         // TODO: If possible, find a way to simplify this so I don't have to manually convert struct to NSDictionary
         let keys = &[
             &*NSString::from_str("mainButtonLabel"),
@@ -112,11 +225,13 @@ impl<'a> NotificationOptions<'a> {
             NSString::from_str(self.app_icon.unwrap_or("")),
             NSString::from_str(self.content_image.unwrap_or("")),
             NSString::from_str(self.group_id.unwrap_or_default()),
+            // TODO: Same as above, if NSDictionary could support multiple types, this could be a boolean
             NSString::from_str(if is_response { "yes" } else { "" }),
             NSString::from_str(&match self.delivery_date {
                 Some((delivery_date, _)) => delivery_date.to_string(),
                 _ => String::new(),
             }),
+            // TODO: Same as above, if NSDictionary could support multiple types, this could be a boolean
             NSString::from_str(match self.delivery_date {
                 Some((_, true)) => "yes",
                 _ => "",
@@ -130,22 +245,23 @@ impl<'a> NotificationOptions<'a> {
     }
 }
 
-/// TODO: DOCUMENTATION
+/// Response from the Notification
 #[derive(Debug)]
 pub enum NotificationResponse {
-    /// TODO: DOCUMENTATION
+    /// No interaction has occured
     None,
-    /// TODO: DOCUMENTATION
+    /// User clicked on an action button with the given name
     ActionButton(String),
-    /// TODO: DOCUMENTATION
+    /// User clicked on the close button with the given name
     CloseButton(String),
-    /// TODO: DOCUMENTATION
+    /// User clicked the notification directly
     Clicked,
-    /// TODO: DOCUMENTATION
+    /// User submitted text to the input text field
     Replied(String),
 }
 
 impl NotificationResponse {
+    /// Create a NotificationResponse from the given Objective C NSDictionary
     fn from_dictionary(dictionary: Id<NSDictionary<NSString, NSString>>) -> Self {
         let dictionary = dictionary.deref();
 
@@ -175,8 +291,7 @@ impl NotificationResponse {
                 },
             ),
             Some("contentsClicked") => NotificationResponse::Clicked,
-            Some(_) => NotificationResponse::None,
-            None => NotificationResponse::None,
+            _ => NotificationResponse::None,
         }
     }
 }
@@ -207,10 +322,9 @@ pub fn send_notification(
         }
     };
 
-    let options = match options {
-        Some(options) => options.to_dictionary(),
-        None => NotificationOptions::default().to_dictionary(),
-    };
+    let options = options
+        .unwrap_or(NotificationOptions::default())
+        .to_dictionary();
 
     unsafe {
         if !APPLICATION_SET {
@@ -257,6 +371,7 @@ pub fn get_bundle_identifier(app_name: &str) -> Option<String> {
 /// Set the application which delivers or schedules a notification
 pub fn set_application(bundle_ident: &str) -> NotificationResult<()> {
     unsafe {
+        // TODO: Is there a point to restricting set_application to only once?
         ensure!(
             !APPLICATION_SET,
             ApplicationError::AlreadySet(bundle_ident.into())
