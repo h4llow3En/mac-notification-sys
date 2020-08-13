@@ -255,9 +255,9 @@ pub enum NotificationResponse {
     /// User clicked on the close button with the given name
     CloseButton(String),
     /// User clicked the notification directly
-    Clicked,
+    Click,
     /// User submitted text to the input text field
-    Replied(String),
+    Reply(String),
 }
 
 impl NotificationResponse {
@@ -284,13 +284,13 @@ impl NotificationResponse {
                     None => String::from(""),
                 },
             ),
-            Some("replied") => NotificationResponse::Replied(
+            Some("replied") => NotificationResponse::Reply(
                 match dictionary.object_for(NSString::from_str("activationValue").deref()) {
                     Some(str) => str.deref().as_str().to_owned(),
                     None => String::from(""),
                 },
             ),
-            Some("contentsClicked") => NotificationResponse::Clicked,
+            Some("contentsClicked") => NotificationResponse::Click,
             _ => NotificationResponse::None,
         }
     }
@@ -371,7 +371,6 @@ pub fn get_bundle_identifier(app_name: &str) -> Option<String> {
 /// Set the application which delivers or schedules a notification
 pub fn set_application(bundle_ident: &str) -> NotificationResult<()> {
     unsafe {
-        // TODO: Is there a point to restricting set_application to only once?
         ensure!(
             !APPLICATION_SET,
             ApplicationError::AlreadySet(bundle_ident.into())

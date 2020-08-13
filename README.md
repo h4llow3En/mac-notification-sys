@@ -56,5 +56,9 @@ fn main() {
 
 ## TODO
 
-- Refactor code to look more like alerter's
+- Refactor & move enums and structs to a new file
+- Turn NotificationOptions into a builder
 - Add timeout option so notifications can be auto-closed
+- Possibly add synchronous option?
+- Allow NSDictionary to hold various types (perhaps with a union?)
+- Switch to UserNotification if possible
