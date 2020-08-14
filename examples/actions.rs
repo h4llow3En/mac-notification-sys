@@ -7,18 +7,14 @@ fn main() {
         "Danger",
         Some("Will Robinson"),
         "Run away as fast as you can",
-        Some(NotificationOptions {
-            main_button: Some(MainButton::DropdownActions(
-                "Dropdown",
-                &["Action 1", "Action 2"],
-            )),
-            close_button: Some("Nevermind..."),
-            app_icon: None,
-            content_image: None,
-            group_id: None,
-            sound: None,
-            delivery_date: None,
-        }),
+        Some(
+            NotificationOptions::new()
+                .main_button(MainButton::DropdownActions(
+                    "Dropdown",
+                    &["Action 1", "Action 2"],
+                ))
+                .close_button("Nevermind..."),
+        ),
     )
     .unwrap();
 

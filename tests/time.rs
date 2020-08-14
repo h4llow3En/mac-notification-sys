@@ -9,15 +9,11 @@ fn dont_schedule_in_past() {
         "Danger",
         Some("Will Robinson"),
         "Run away as fast as you can",
-        Some(NotificationOptions {
-            main_button: None,
-            close_button: None,
-            app_icon: None,
-            content_image: None,
-            group_id: None,
-            sound: Some("Blow"),
-            delivery_date: Some((stamp, true)),
-        }),
+        Some(
+            NotificationOptions::new()
+                .sound("Blow")
+                .delivery_date(stamp, true),
+        ),
     )
     .unwrap();
 }

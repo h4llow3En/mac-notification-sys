@@ -39,15 +39,7 @@ fn main() {
         "NOW",
         None,
         "Without subtitle",
-        Some(NotificationOptions {
-            app_icon: None,
-            content_image: None,
-            main_button: None,
-            close_button: None,
-            group_id: None,
-            delivery_date: None,
-            sound: Some("Submarine"),
-        }),
+        Some(NotificationOptions::new().sound("Blow")),
     )
     .unwrap();
 }
@@ -56,8 +48,6 @@ fn main() {
 
 ## TODO
 
-- Refactor & move enums and structs to a new file
-- Turn NotificationOptions into a builder
 - Add timeout option so notifications can be auto-closed
 - Possibly add synchronous option?
 - Allow NSDictionary to hold various types (perhaps with a union?)

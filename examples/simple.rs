@@ -16,15 +16,7 @@ fn main() {
         "NOW",
         None,
         "Without subtitle",
-        Some(NotificationOptions {
-            app_icon: None,
-            content_image: None,
-            main_button: None,
-            close_button: None,
-            group_id: None,
-            delivery_date: None,
-            sound: Some("Submarine"),
-        }),
+        Some(NotificationOptions::new().sound("Submarine")),
     )
     .unwrap();
 }

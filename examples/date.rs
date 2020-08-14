@@ -10,15 +10,11 @@ fn main() {
         "Danger",
         Some("Will Robinson"),
         "Run away as fast as you can",
-        Some(NotificationOptions {
-            main_button: None,
-            close_button: None,
-            app_icon: None,
-            content_image: None,
-            group_id: None,
-            sound: Some("Blow"),
-            delivery_date: Some((stamp + 5., false)),
-        }),
+        Some(
+            NotificationOptions::new()
+                .sound("Blow")
+                .delivery_date(stamp + 5., false),
+        ),
     )
     .unwrap();
 }
