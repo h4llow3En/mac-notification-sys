@@ -45,8 +45,9 @@ pub struct Notification<'a> {
     pub(crate) app_icon: Option<&'a str>,
     pub(crate) content_image: Option<&'a str>,
     pub(crate) group_id: Option<&'a str>,
-    pub(crate) delivery_date: Option<(f64, bool)>,
+    pub(crate) delivery_date: Option<f64>,
     pub(crate) sound: Option<&'a str>,
+    pub(crate) asynchronous: Option<bool>,
 }
 
 impl<'a> Notification<'a> {
@@ -125,24 +126,16 @@ impl<'a> Notification<'a> {
 
     /// Schedule the notification to be delivered at a later time
     ///
-    /// The delivery_date parameter is the time at which to schedule the notification
-    ///
-    /// The synchronous parameter defines whether or not the notification
-    /// should wait synchronously until it has been delivered (if no action is set)
-    ///
     /// # Example:
     ///
     /// ```no_run
     /// # use mac_notification_sys::*;
     /// # use chrono::offset::*;
     /// let stamp = Utc::now().timestamp() as f64 + 5.;
-    ///
-    /// // Synchronous is true, this will wait until the user
-    /// // interacts with the notification before returning
-    /// let _ = Notification::new().delivery_date(stamp, true);
+    /// let _ = Notification::new().delivery_date(stamp);
     /// ```
-    pub fn delivery_date(&mut self, delivery_date: f64, synchronous: bool) -> &mut Self {
-        self.delivery_date = Some((delivery_date, synchronous));
+    pub fn delivery_date(&mut self, delivery_date: f64) -> &mut Self {
+        self.delivery_date = Some(delivery_date);
         self
     }
 
@@ -159,6 +152,21 @@ impl<'a> Notification<'a> {
         self
     }
 
+    /// Deliver the notification asynchronously (without waiting for an interaction).
+    ///
+    /// Note: Setting this to true is equivalent to a fire-and-forget.
+    ///
+    /// # Example:
+    ///
+    /// ```no_run
+    /// # use mac_notification_sys::*;
+    /// let _ = Notification::new().asynchronous(true);
+    /// ```
+    pub fn asynchronous(&mut self, asynchronous: bool) -> &mut Self {
+        self.asynchronous = Some(asynchronous);
+        self
+    }
+
     /// Convert the Notification to an Objective C NSDictionary
     pub(crate) fn to_dictionary(&self) -> Id<NSDictionary<NSString, NSString>> {
         // TODO: If possible, find a way to simplify this so I don't have to manually convert struct to NSDictionary
@@ -171,7 +179,7 @@ impl<'a> Notification<'a> {
             &*NSString::from_str("groupID"),
             &*NSString::from_str("response"),
             &*NSString::from_str("deliveryDate"),
-            &*NSString::from_str("synchronous"),
+            &*NSString::from_str("asynchronous"),
             &*NSString::from_str("sound"),
         ];
         let (main_button_label, actions, is_response): (&str, &[&str], bool) =
@@ -197,13 +205,13 @@ impl<'a> Notification<'a> {
             // TODO: Same as above, if NSDictionary could support multiple types, this could be a boolean
             NSString::from_str(if is_response { "yes" } else { "" }),
             NSString::from_str(&match self.delivery_date {
-                Some((delivery_date, _)) => delivery_date.to_string(),
+                Some(delivery_date) => delivery_date.to_string(),
                 _ => String::new(),
             }),
             // TODO: Same as above, if NSDictionary could support multiple types, this could be a boolean
-            NSString::from_str(match self.delivery_date {
-                Some((_, true)) => "yes",
-                _ => "",
+            NSString::from_str(match self.asynchronous {
+                Some(true) => "yes",
+                _ => "no",
             }),
             NSString::from_str(match self.sound {
                 Some(sound) if check_sound(sound) => sound,
@@ -234,11 +242,9 @@ impl NotificationResponse {
     pub(crate) fn from_dictionary(dictionary: Id<NSDictionary<NSString, NSString>>) -> Self {
         let dictionary = dictionary.deref();
 
-        let activation_type =
-            match dictionary.object_for(NSString::from_str("activationType").deref()) {
-                Some(str) => Some(str.deref().as_str().to_owned()),
-                None => None,
-            };
+        let activation_type = dictionary
+            .object_for(NSString::from_str("activationType").deref())
+            .map(|str| str.deref().as_str().to_owned());
 
         match activation_type.as_deref() {
             Some("actionClicked") => NotificationResponse::ActionButton(

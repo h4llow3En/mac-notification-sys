@@ -9,7 +9,12 @@ fn dont_schedule_in_past() {
         "Danger",
         Some("Will Robinson"),
         "Run away as fast as you can",
-        Some(Notification::new().sound("Blow").delivery_date(stamp, true)),
+        Some(
+            Notification::new()
+                .sound("Blow")
+                .delivery_date(stamp)
+                .asynchronous(true),
+        ),
     )
     .unwrap();
 }

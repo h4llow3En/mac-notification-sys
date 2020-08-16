@@ -10,11 +10,7 @@ fn main() {
         "Danger",
         Some("Will Robinson"),
         "Run away as fast as you can",
-        Some(
-            Notification::new()
-                .sound("Blow")
-                .delivery_date(stamp + 5., false),
-        ),
+        Some(Notification::new().sound("Blow").delivery_date(stamp + 5.)),
     )
     .unwrap();
 }

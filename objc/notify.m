@@ -42,9 +42,11 @@ NSDictionary* sendNotification(NSString* title, NSString* subtitle, NSString* me
 
         NSUserNotificationCenter* notificationCenter = [NSUserNotificationCenter defaultUserNotificationCenter];
         NotificationCenterDelegate* ncDelegate = [[NotificationCenterDelegate alloc] init];
-        // By default, don't wait for actions. This is set to YES when a button/action-related option is set.
-        ncDelegate.keepRunning = NO;
         notificationCenter.delegate = ncDelegate;
+
+        // By default, do not wait for interaction unless an action or schedule is set.
+        // This can be overriden with `asynchronous` in order to always "fire and forget"
+        ncDelegate.keepRunning = NO;
 
         NSUserNotification* userNotification = [[NSUserNotification alloc] init];
         BOOL isScheduled = NO;
@@ -66,31 +68,27 @@ NSDictionary* sendNotification(NSString* title, NSString* subtitle, NSString* me
         // Delivery Date/Schedule
         if (options[@"deliveryDate"] && ![options[@"deliveryDate"] isEqualToString:@""])
         {
+            ncDelegate.keepRunning = YES;
             double deliveryDate = [options[@"deliveryDate"] doubleValue];
             NSDate* scheduleTime = [NSDate dateWithTimeIntervalSince1970:deliveryDate];
             userNotification.deliveryDate = scheduleTime;
             NSLog(@"Delivery date option passed as %@ converted to %f resulting in %@", options[@"deliveryDate"], deliveryDate, scheduleTime);
             isScheduled = YES;
-
-            if (options[@"synchronous"] && [options[@"synchronous"] isEqualToString:@"yes"])
-            {
-                ncDelegate.keepRunning = YES;
-            }
         }
 
         // Main Actions Button (defaults to "Show")
         if (options[@"mainButtonLabel"] && ![options[@"mainButtonLabel"] isEqualToString:@""])
         {
+            ncDelegate.keepRunning = YES;
             userNotification.actionButtonTitle = options[@"mainButtonLabel"];
             userNotification.hasActionButton = 1;
-            ncDelegate.keepRunning = YES;
         }
 
         // Dropdown actions
         if (options[@"actions"] && ![options[@"actions"] isEqualToString:@""])
         {
-            [userNotification setValue:@YES forKey:@"_showsButtons"];
             ncDelegate.keepRunning = YES;
+            [userNotification setValue:@YES forKey:@"_showsButtons"];
 
             NSArray* myActions = [options[@"actions"] componentsSeparatedByString:@","];
 
@@ -129,6 +127,12 @@ NSDictionary* sendNotification(NSString* title, NSString* subtitle, NSString* me
         if (options[@"contentImage"] && ![options[@"contentImage"] isEqualToString:@""])
         {
             userNotification.contentImage = getImageFromURL(options[@"contentImage"]);
+        }
+
+        // If set to asynchronous, do not wait for actions
+        if (options[@"asynchronous"] && [options[@"asynchronous"] isEqualToString:@"yes"])
+        {
+            ncDelegate.keepRunning = NO;
         }
 
         // Send or schedule notification

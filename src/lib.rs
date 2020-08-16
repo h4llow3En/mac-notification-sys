@@ -54,7 +54,7 @@ pub fn send_notification(
     options: Option<&Notification>,
 ) -> NotificationResult<NotificationResponse> {
     if let Some(options) = &options {
-        if let Some((delivery_date, _)) = options.delivery_date {
+        if let Some(delivery_date) = options.delivery_date {
             ensure!(
                 delivery_date >= Utc::now().timestamp() as f64,
                 NotificationError::ScheduleInThePast

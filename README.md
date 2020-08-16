@@ -48,7 +48,6 @@ fn main() {
 
 ## TODO
 
-- Add timeout option so notifications can be auto-closed
-- Possibly add synchronous option?
-- Allow NSDictionary to hold various types (perhaps with a union?)
-- Switch to UserNotification if possible
+- [] Add timeout option so notifications can be auto-closed
+- [] Allow NSDictionary to hold various types (perhaps with a union?)
+- [] Switch to UserNotification if possible
