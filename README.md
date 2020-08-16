@@ -39,7 +39,7 @@ fn main() {
         "NOW",
         None,
         "Without subtitle",
-        Some(NotificationOptions::new().sound("Blow")),
+        Some(Notification::new().sound("Blow")),
     )
     .unwrap();
 }

@@ -8,7 +8,7 @@ fn main() {
         Some("Will Robinson"),
         "Run away as fast as you can",
         Some(
-            NotificationOptions::new()
+            Notification::new()
                 .main_button(MainButton::DropdownActions(
                     "Dropdown",
                     &["Action 1", "Action 2"],

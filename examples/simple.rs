@@ -16,7 +16,7 @@ fn main() {
         "NOW",
         None,
         "Without subtitle",
-        Some(NotificationOptions::new().sound("Submarine")),
+        Some(Notification::new().sound("Submarine")),
     )
     .unwrap();
 }

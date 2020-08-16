@@ -20,7 +20,7 @@ BOOL setApplication(NSString* newbundleIdentifier)
     return NO;
 }
 
-// sendNotification(title: &str, subtitle: &str, message: &str, options: NotificationOptions) -> NotificationResult<()>
+// sendNotification(title: &str, subtitle: &str, message: &str, options: Notification) -> NotificationResult<()>
 NSDictionary* sendNotification(NSString* title, NSString* subtitle, NSString* message, NSDictionary* options)
 {
     @autoreleasepool
@@ -30,6 +30,8 @@ NSDictionary* sendNotification(NSString* title, NSString* subtitle, NSString* me
             // TODO: Could potentially have different error messages
             return @{@"error" : @""};
         }
+
+        // For a list of available notification options, see https://developer.apple.com/documentation/foundation/nsusernotification?language=objc
 
         // TODO: Handle scheduled notifications removing others before they actually show up
         // Remove previous notification with the same group ID

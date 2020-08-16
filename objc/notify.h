@@ -36,6 +36,8 @@ BOOL installNSBundleHook()
 @property(nonatomic, retain) NSDictionary* actionData;
 @end
 
+// Delegate to respond to events in the NSUserNotificationCenter
+// See https://developer.apple.com/documentation/foundation/nsusernotificationcenterdelegate?language=objc
 @implementation NotificationCenterDelegate
 - (void)userNotificationCenter:(NSUserNotificationCenter*)center didDeliverNotification:(NSUserNotification*)notification
 {
@@ -52,6 +54,8 @@ BOOL installNSBundleHook()
     unsigned long long additionalActionIndex = ULLONG_MAX;
     NSString* ActionsClicked = @"";
 
+    // Switch on how the notification was interacted with
+    // See https://developer.apple.com/documentation/foundation/nsusernotification/1416143-activationtype?language=objc
     switch (notification.activationType)
     {
         case NSUserNotificationActivationTypeActionButtonClicked:
@@ -111,6 +115,7 @@ BOOL installNSBundleHook()
 }
 @end
 
+// Utility function to create an NSImage from an url
 NSImage* getImageFromURL(NSString* url)
 {
     NSURL* imageURL = [NSURL URLWithString:url];
@@ -122,6 +127,7 @@ NSImage* getImageFromURL(NSString* url)
     return [[NSImage alloc] initWithContentsOfURL:imageURL];
 }
 
+// Utility function to remove any notification with the associated groupId that is currently in the notification center
 void removeNotificationWithGroupID(NSString* groupID)
 {
     NSUserNotificationCenter* center = [NSUserNotificationCenter defaultUserNotificationCenter];

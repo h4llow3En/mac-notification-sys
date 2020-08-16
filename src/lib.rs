@@ -9,13 +9,12 @@
 #![cfg(target_os = "macos")]
 #![allow(improper_ctypes)]
 
-mod data;
 pub mod error;
-mod utilities;
+mod notification;
 
 use chrono::offset::*;
-pub use data::{MainButton, NotificationOptions, NotificationResponse};
 use error::{ApplicationError, NotificationError, NotificationResult};
+pub use notification::{MainButton, Notification, NotificationResponse};
 use objc_foundation::{INSDictionary, INSString, NSString};
 use std::ops::Deref;
 
@@ -52,7 +51,7 @@ pub fn send_notification(
     title: &str,
     subtitle: Option<&str>,
     message: &str,
-    options: Option<&NotificationOptions>,
+    options: Option<&Notification>,
 ) -> NotificationResult<NotificationResponse> {
     if let Some(options) = &options {
         if let Some((delivery_date, _)) = options.delivery_date {
@@ -63,9 +62,7 @@ pub fn send_notification(
         }
     };
 
-    let options = options
-        .unwrap_or(&NotificationOptions::new())
-        .to_dictionary();
+    let options = options.unwrap_or(&Notification::new()).to_dictionary();
 
     unsafe {
         if !APPLICATION_SET {

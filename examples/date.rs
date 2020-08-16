@@ -11,7 +11,7 @@ fn main() {
         Some("Will Robinson"),
         "Run away as fast as you can",
         Some(
-            NotificationOptions::new()
+            Notification::new()
                 .sound("Blow")
                 .delivery_date(stamp + 5., false),
         ),

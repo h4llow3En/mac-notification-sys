@@ -1,9 +1,10 @@
 //! Custom structs and enums for mac-notification-sys.
 
-use crate::utilities::check_sound;
 use objc_foundation::{INSDictionary, INSString, NSDictionary, NSString};
 use objc_id::Id;
+use std::default::Default;
 use std::ops::Deref;
+use std::path::PathBuf;
 
 /// Possible actions accessible through the main button of the notification
 pub enum MainButton<'a> {
@@ -37,7 +38,8 @@ pub enum MainButton<'a> {
 }
 
 /// Options to further customize the notification
-pub struct NotificationOptions<'a> {
+#[derive(Default)]
+pub struct Notification<'a> {
     pub(crate) main_button: Option<MainButton<'a>>,
     pub(crate) close_button: Option<&'a str>,
     pub(crate) app_icon: Option<&'a str>,
@@ -47,18 +49,10 @@ pub struct NotificationOptions<'a> {
     pub(crate) sound: Option<&'a str>,
 }
 
-impl<'a> NotificationOptions<'a> {
-    /// Create a NotificationOptions to further customize the notification
-    pub fn new() -> NotificationOptions<'a> {
-        NotificationOptions {
-            main_button: None,
-            close_button: None,
-            app_icon: None,
-            content_image: None,
-            group_id: None,
-            delivery_date: None,
-            sound: None,
-        }
+impl<'a> Notification<'a> {
+    /// Create a Notification to further customize the notification
+    pub fn new() -> Self {
+        Default::default()
     }
 
     /// Allow actions through a main button
@@ -67,7 +61,7 @@ impl<'a> NotificationOptions<'a> {
     ///
     /// ```no_run
     /// # use mac_notification_sys::*;
-    /// let _ = NotificationOptions::new().main_button(MainButton::SingleAction("Main button"));
+    /// let _ = Notification::new().main_button(MainButton::SingleAction("Main button"));
     /// ```
     pub fn main_button(&mut self, main_button: MainButton<'a>) -> &mut Self {
         self.main_button = Some(main_button);
@@ -80,7 +74,7 @@ impl<'a> NotificationOptions<'a> {
     ///
     /// ```no_run
     /// # use mac_notification_sys::*;
-    /// let _ = NotificationOptions::new().close_button("Close");
+    /// let _ = Notification::new().close_button("Close");
     /// ```
     pub fn close_button(&mut self, close_button: &'a str) -> &mut Self {
         self.close_button = Some(close_button);
@@ -95,7 +89,7 @@ impl<'a> NotificationOptions<'a> {
     ///
     /// ```no_run
     /// # use mac_notification_sys::*;
-    /// let _ = NotificationOptions::new().app_icon("/path/to/icon.icns");
+    /// let _ = Notification::new().app_icon("/path/to/icon.icns");
     /// ```
     pub fn app_icon(&mut self, app_icon: &'a str) -> &mut Self {
         self.app_icon = Some(app_icon);
@@ -108,7 +102,7 @@ impl<'a> NotificationOptions<'a> {
     ///
     /// ```no_run
     /// # use mac_notification_sys::*;
-    /// let _ = NotificationOptions::new().content_image("/path/to/image.png");
+    /// let _ = Notification::new().content_image("/path/to/image.png");
     /// ```
     pub fn content_image(&mut self, content_image: &'a str) -> &mut Self {
         self.content_image = Some(content_image);
@@ -122,7 +116,7 @@ impl<'a> NotificationOptions<'a> {
     ///
     /// ```no_run
     /// # use mac_notification_sys::*;
-    /// let _ = NotificationOptions::new().group_id("my_group_id");
+    /// let _ = Notification::new().group_id("my_group_id");
     /// ```
     pub fn group_id(&mut self, group_id: &'a str) -> &mut Self {
         self.group_id = Some(group_id);
@@ -145,7 +139,7 @@ impl<'a> NotificationOptions<'a> {
     ///
     /// // Synchronous is true, this will wait until the user
     /// // interacts with the notification before returning
-    /// let _ = NotificationOptions::new().delivery_date(stamp, true);
+    /// let _ = Notification::new().delivery_date(stamp, true);
     /// ```
     pub fn delivery_date(&mut self, delivery_date: f64, synchronous: bool) -> &mut Self {
         self.delivery_date = Some((delivery_date, synchronous));
@@ -158,14 +152,14 @@ impl<'a> NotificationOptions<'a> {
     ///
     /// ```no_run
     /// # use mac_notification_sys::*;
-    /// let _ = NotificationOptions::new().sound("Blow");
+    /// let _ = Notification::new().sound("Blow");
     /// ```
     pub fn sound(&mut self, sound: &'a str) -> &mut Self {
         self.sound = Some(sound);
         self
     }
 
-    /// Convert the NotificationOptions into an Objective C NSDictionary
+    /// Convert the Notification to an Objective C NSDictionary
     pub(crate) fn to_dictionary(&self) -> Id<NSDictionary<NSString, NSString>> {
         // TODO: If possible, find a way to simplify this so I don't have to manually convert struct to NSDictionary
         let keys = &[
@@ -269,4 +263,21 @@ impl NotificationResponse {
             _ => NotificationResponse::None,
         }
     }
+}
+
+pub(crate) fn check_sound(sound_name: &str) -> bool {
+    dirs::home_dir()
+        .map(|path| path.join("/Library/Sounds/"))
+        .into_iter()
+        .chain(
+            [
+                "/Library/Sounds/",
+                "/Network/Library/Sounds/",
+                "/System/Library/Sounds/",
+            ]
+            .iter()
+            .map(PathBuf::from),
+        )
+        .map(|sound_path| sound_path.join(format!("{}.aiff", sound_name)))
+        .any(|some_path| some_path.exists())
 }
