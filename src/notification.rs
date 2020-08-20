@@ -44,7 +44,6 @@ pub struct Notification<'a> {
     pub(crate) close_button: Option<&'a str>,
     pub(crate) app_icon: Option<&'a str>,
     pub(crate) content_image: Option<&'a str>,
-    pub(crate) group_id: Option<&'a str>,
     pub(crate) delivery_date: Option<f64>,
     pub(crate) sound: Option<&'a str>,
     pub(crate) asynchronous: Option<bool>,
@@ -110,20 +109,6 @@ impl<'a> Notification<'a> {
         self
     }
 
-    /// Set an identifier to group multiple notifications together
-    /// Notifications in group will dismiss each other so only the latest one is displayed
-    ///
-    /// # Example:
-    ///
-    /// ```no_run
-    /// # use mac_notification_sys::*;
-    /// let _ = Notification::new().group_id("my_group_id");
-    /// ```
-    pub fn group_id(&mut self, group_id: &'a str) -> &mut Self {
-        self.group_id = Some(group_id);
-        self
-    }
-
     /// Schedule the notification to be delivered at a later time
     ///
     /// # Example:
@@ -176,7 +161,6 @@ impl<'a> Notification<'a> {
             &*NSString::from_str("closeButtonLabel"),
             &*NSString::from_str("appIcon"),
             &*NSString::from_str("contentImage"),
-            &*NSString::from_str("groupID"),
             &*NSString::from_str("response"),
             &*NSString::from_str("deliveryDate"),
             &*NSString::from_str("asynchronous"),
@@ -201,7 +185,6 @@ impl<'a> Notification<'a> {
             NSString::from_str(self.close_button.unwrap_or("")),
             NSString::from_str(self.app_icon.unwrap_or("")),
             NSString::from_str(self.content_image.unwrap_or("")),
-            NSString::from_str(self.group_id.unwrap_or_default()),
             // TODO: Same as above, if NSDictionary could support multiple types, this could be a boolean
             NSString::from_str(if is_response { "yes" } else { "" }),
             NSString::from_str(&match self.delivery_date {

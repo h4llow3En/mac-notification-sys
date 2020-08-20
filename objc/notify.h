@@ -126,17 +126,3 @@ NSImage* getImageFromURL(NSString* url)
     }
     return [[NSImage alloc] initWithContentsOfURL:imageURL];
 }
-
-// Utility function to remove any notification with the associated groupId that is currently in the notification center
-void removeNotificationWithGroupID(NSString* groupID)
-{
-    NSUserNotificationCenter* center = [NSUserNotificationCenter defaultUserNotificationCenter];
-    for (NSUserNotification* userNotification in center.deliveredNotifications)
-    {
-        if ([@"ALL" isEqualToString:groupID] || [userNotification.userInfo[@"groupID"] isEqualToString:groupID])
-        {
-            [center removeDeliveredNotification:userNotification];
-            [center removeDeliveredNotification:userNotification];
-        }
-    }
-}

@@ -33,13 +33,6 @@ NSDictionary* sendNotification(NSString* title, NSString* subtitle, NSString* me
 
         // For a list of available notification options, see https://developer.apple.com/documentation/foundation/nsusernotification?language=objc
 
-        // TODO: Handle scheduled notifications removing others before they actually show up
-        // Remove previous notification with the same group ID
-        if (options[@"groupID"] && ![options[@"groupId"] isEqualToString:@""])
-        {
-            removeNotificationWithGroupID(options[@"groupID"]);
-        }
-
         NSUserNotificationCenter* notificationCenter = [NSUserNotificationCenter defaultUserNotificationCenter];
         NotificationCenterDelegate* ncDelegate = [[NotificationCenterDelegate alloc] init];
         notificationCenter.delegate = ncDelegate;
