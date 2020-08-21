@@ -1,0 +1,17 @@
+name: test-clang-format
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - uses: DoozyX/clang-format-lint-action@v0.8
+      with:
+        source: './objc'
+        exclude: './third_party ./external'
+        extensions: 'h,m'
+        clangFormatVersion: 10
+        style: file # read style from .clang-format
