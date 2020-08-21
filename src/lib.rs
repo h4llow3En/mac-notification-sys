@@ -1,88 +1,38 @@
 //! A very thin wrapper around NSNotifications
 #![deny(
-    missing_docs, trivial_casts, trivial_numeric_casts, unused_import_braces, unused_qualifications
+    missing_docs,
+    trivial_casts,
+    trivial_numeric_casts,
+    unused_import_braces,
+    unused_qualifications
 )]
 #![cfg(target_os = "macos")]
 #![allow(improper_ctypes)]
 
-extern crate chrono;
-extern crate objc_foundation;
 pub mod error;
+mod notification;
 
 use chrono::offset::*;
-use error::{ ApplicationError, NotificationError, NotificationResult };
-use objc_foundation::{INSString, NSString};
+use error::{ApplicationError, NotificationError, NotificationResult};
+pub use notification::{MainButton, Notification, NotificationResponse};
+use objc_foundation::{INSDictionary, INSString, NSString};
 use std::ops::Deref;
-use std::path::PathBuf;
 
 static mut APPLICATION_SET: bool = false;
 
 mod sys {
-    use objc_foundation::NSString;
+    use objc_foundation::{NSDictionary, NSString};
+    use objc_id::Id;
     #[link(name = "notify")]
     extern "C" {
-        pub fn scheduleNotification(
-            title: *const NSString,
-            subtitle: *const NSString,
-            message: *const NSString,
-            sound: *const NSString,
-            deliveryDate: f64,
-        ) -> bool;
         pub fn sendNotification(
             title: *const NSString,
             subtitle: *const NSString,
             message: *const NSString,
-            sound: *const NSString,
-        ) -> bool;
+            options: *const NSDictionary<NSString, NSString>,
+        ) -> Id<NSDictionary<NSString, NSString>>;
         pub fn setApplication(newbundleIdentifier: *const NSString) -> bool;
         pub fn getBundleIdentifier(appName: *const NSString) -> *const NSString;
-    }
-}
-
-/// Schedules a new notification in the NotificationCenter
-///
-/// Returns a `NotificationError` if a notification could not be scheduled
-/// or is scheduled in the past
-///
-/// # Example:
-///
-/// ```ignore
-/// extern crate chrono;
-/// # use mac_notification_sys::*;
-/// use chrono::offset::*;
-///
-/// // schedule a notification in 5 seconds
-/// let _ = schedule_notification("Title", &None, "This is the body", &Some("Ping"),
-///                               Utc::now().timestamp() as f64 + 5.).unwrap();
-/// ```
-pub fn schedule_notification(
-    title: &str,
-    subtitle: &Option<&str>,
-    message: &str,
-    sound: &Option<&str>,
-    delivery_date: f64,
-) -> NotificationResult<()> {
-    ensure!(
-        delivery_date >= Utc::now().timestamp() as f64,
-        NotificationError::ScheduleInThePast
-    );
-
-    let use_sound = match sound {
-        Some(sound) if check_sound(sound) => sound,
-        _ => "_mute",
-    };
-    unsafe {
-        ensure!(
-            sys::scheduleNotification(
-                NSString::from_str(title).deref(),
-                NSString::from_str(subtitle.unwrap_or("")).deref(),
-                NSString::from_str(message).deref(),
-                NSString::from_str(use_sound).deref(),
-                delivery_date,
-            ),
-            NotificationError::UnableToSchedule
-        );
-        Ok(())
     }
 }
 
@@ -94,19 +44,25 @@ pub fn schedule_notification(
 ///
 /// ```no_run
 /// # use mac_notification_sys::*;
-/// // daliver a silent notification
-/// let _ = send_notification("Title", &None, "This is the body", &None).unwrap();
+/// // deliver a silent notification
+/// let _ = send_notification("Title", None, "This is the body", None).unwrap();
 /// ```
 pub fn send_notification(
     title: &str,
-    subtitle: &Option<&str>,
+    subtitle: Option<&str>,
     message: &str,
-    sound: &Option<&str>,
-) -> NotificationResult<()> {
-    let use_sound = match sound {
-        Some(sound) if check_sound(sound) => sound,
-        _ => "_mute",
+    options: Option<&Notification>,
+) -> NotificationResult<NotificationResponse> {
+    if let Some(options) = &options {
+        if let Some(delivery_date) = options.delivery_date {
+            ensure!(
+                delivery_date >= Utc::now().timestamp() as f64,
+                NotificationError::ScheduleInThePast
+            );
+        }
     };
+
+    let options = options.unwrap_or(&Notification::new()).to_dictionary();
 
     unsafe {
         if !APPLICATION_SET {
@@ -114,16 +70,23 @@ pub fn send_notification(
             set_application(&bundle).unwrap();
             APPLICATION_SET = true;
         }
+        let dictionary_response = sys::sendNotification(
+            NSString::from_str(title).deref(),
+            NSString::from_str(subtitle.unwrap_or("")).deref(),
+            NSString::from_str(message).deref(),
+            options.deref(),
+        );
         ensure!(
-            sys::sendNotification(
-                NSString::from_str(title).deref(),
-                NSString::from_str(subtitle.unwrap_or("")).deref(),
-                NSString::from_str(message).deref(),
-                NSString::from_str(use_sound).deref()
-            ),
+            dictionary_response
+                .deref()
+                .object_for(NSString::from_str("error").deref())
+                .is_none(),
             NotificationError::UnableToDeliver
         );
-        Ok(())
+
+        let response = NotificationResponse::from_dictionary(dictionary_response);
+
+        Ok(response)
     }
 }
 
@@ -146,7 +109,10 @@ pub fn get_bundle_identifier(app_name: &str) -> Option<String> {
 /// Set the application which delivers or schedules a notification
 pub fn set_application(bundle_ident: &str) -> NotificationResult<()> {
     unsafe {
-        ensure!(!APPLICATION_SET, ApplicationError::AlreadySet(bundle_ident.into()));
+        ensure!(
+            !APPLICATION_SET,
+            ApplicationError::AlreadySet(bundle_ident.into())
+        );
         APPLICATION_SET = true;
         ensure!(
             sys::setApplication(NSString::from_str(bundle_ident).deref()),
@@ -154,20 +120,4 @@ pub fn set_application(bundle_ident: &str) -> NotificationResult<()> {
         );
         Ok(())
     }
-}
-
-fn check_sound(sound_name: &str) -> bool {
-    dirs::home_dir()
-        .map(|path| path.join("/Library/Sounds/"))
-        .into_iter()
-        .chain(
-            [
-                "/Library/Sounds/",
-                "/Network/Library/Sounds/",
-                "/System/Library/Sounds/",
-            ].iter()
-                .map(PathBuf::from),
-        )
-        .map(|sound_path| sound_path.join(format!("{}.aiff", sound_name)))
-        .any(|some_path| some_path.exists())
 }

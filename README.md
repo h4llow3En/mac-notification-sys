@@ -13,24 +13,41 @@ A simple wrapper to deliver or schedule macOS Notifications in Rust.
 [dependencies]
 mac-notification-sys = "0.1"
 ```
+
 ## Documentation
+
 The documentation can be found [here](https://h4llow3en.github.io/mac-notification-sys/mac_notification_sys/)
 
 ## Example
 
 ```rust
-extern crate mac_notification_sys;
 use mac_notification_sys::*;
 
 fn main() {
     let bundle = get_bundle_identifier_or_default("firefox");
     set_application(&bundle).unwrap();
-    send_notification("Danger",
-                      &Some("Will Robinson"),
-                      "Run away as fast as you can",
-                      &Some("Blow"))
-        .unwrap();
-    send_notification("NOW", &None, "Without subtitle", &Some("Submarine")).unwrap();
 
+    send_notification(
+        "Danger",
+        Some("Will Robinson"),
+        "Run away as fast as you can",
+        None,
+    )
+    .unwrap();
+
+    send_notification(
+        "NOW",
+        None,
+        "Without subtitle",
+        Some(Notification::new().sound("Blow")),
+    )
+    .unwrap();
 }
+
 ```
+
+## TODO
+
+- [] Add timeout option so notifications can be auto-closed
+- [] Allow NSDictionary to hold various types (perhaps with a union?)
+- [] Switch to UserNotification if possible

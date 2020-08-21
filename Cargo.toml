@@ -3,6 +3,7 @@ name = "mac-notification-sys"
 version = "0.3.1"
 authors = ["Felix Döring <development@felixdoering.com>", "Hendrik Sollich <hendrik@hoodie.de>"]
 description = "Thin wrapper around macOS Notifications."
+edition = "2018"
 
 homepage = "https://github.com/h4llow3En/mac-notification-sys"
 repository = "https://github.com/h4llow3En/mac-notification-sys"
@@ -18,6 +19,7 @@ build = "build.rs"
 
 [dependencies]
 objc-foundation = "0.1.1"
+objc_id = "0.1.1"
 chrono = "0.4.0"
 dirs = "1.0"
 

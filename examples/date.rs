@@ -1,5 +1,3 @@
-extern crate mac_notification_sys;
-extern crate chrono;
 use chrono::offset::*;
 use mac_notification_sys::*;
 
@@ -8,11 +6,11 @@ fn main() {
     println!("{:?}", stamp);
     let bundle = get_bundle_identifier_or_default("firefox");
     set_application(&bundle).unwrap();
-    schedule_notification("Danger",
-                          &Some("Will Robinson"),
-                          "Run away as fast as you can",
-                          &Some("Blow"),
-                          stamp + 5.)
-        .unwrap();
-
+    send_notification(
+        "Danger",
+        Some("Will Robinson"),
+        "Run away as fast as you can",
+        Some(Notification::new().sound("Blow").delivery_date(stamp + 5.)),
+    )
+    .unwrap();
 }

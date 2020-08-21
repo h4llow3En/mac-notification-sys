@@ -1,5 +1,3 @@
-extern crate mac_notification_sys;
-
 use mac_notification_sys::*;
 
 #[test]
