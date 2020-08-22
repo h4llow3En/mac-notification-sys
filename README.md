@@ -1,8 +1,10 @@
 # mac-notification-sys
 
-[![license](https://img.shields.io/crates/l/mac-notification-sys.svg)](https://crates.io/crates/mac-notification-sys/)
-[![version](https://img.shields.io/crates/v/mac-notification-sys.svg)](https://crates.io/crates/mac-notification-sys/)
-[![Build Status](https://travis-ci.com/h4llow3En/mac-notification-sys.svg?token=nfC1sQZDhGQq93RfYx3k&branch=master)](https://travis-ci.com/h4llow3En/mac-notification-sys)
+![Crates.io](https://img.shields.io/badge/platform-macOS-lightgrey?style=flat-square)
+[![license](https://img.shields.io/crates/l/mac-notification-sys?style=flat-square)](https://crates.io/crates/mac-notification-sys/)
+[![version](https://img.shields.io/crates/v/mac-notification-sys?style=flat-square)](https://crates.io/crates/mac-notification-sys/)
+![Crates.io](https://img.shields.io/crates/d/mac-notification-sys?style=flat-square)
+
 
 A simple wrapper to deliver or schedule macOS Notifications in Rust.
 
@@ -11,7 +13,7 @@ A simple wrapper to deliver or schedule macOS Notifications in Rust.
 ```toml
 #Cargo.toml
 [dependencies]
-mac-notification-sys = "0.1"
+mac-notification-sys = "0.3"
 ```
 
 ## Documentation
@@ -48,6 +50,12 @@ fn main() {
 
 ## TODO
 
-- [] Add timeout option so notifications can be auto-closed
-- [] Allow NSDictionary to hold various types (perhaps with a union?)
-- [] Switch to UserNotification if possible
+- [ ] Add timeout option so notifications can be auto-closed
+- [ ] Allow NSDictionary to hold various types (perhaps with a union?)
+- [ ] Switch to UserNotification if possible
+
+## Contributors
+
+ Thanks goes to these wonderful people:
+ - [@hoodie](https://github.com/hoodie)
+ - [@PandawanFr](https://github.com/PandawanFr)
