@@ -17,8 +17,10 @@ use error::{ApplicationError, NotificationError, NotificationResult};
 pub use notification::{MainButton, Notification, NotificationResponse};
 use objc_foundation::{INSDictionary, INSString, NSString};
 use std::ops::Deref;
+use std::sync::Once;
 
 static mut APPLICATION_SET: bool = false;
+static INIT_APPLICATION_SET: Once = Once::new();
 
 mod sys {
     use objc_foundation::{NSDictionary, NSString};
@@ -68,7 +70,6 @@ pub fn send_notification(
         if !APPLICATION_SET {
             let bundle = get_bundle_identifier_or_default("use_default");
             set_application(&bundle).unwrap();
-            APPLICATION_SET = true;
         }
         let dictionary_response = sys::sendNotification(
             NSString::from_str(title).deref(),
@@ -109,15 +110,14 @@ pub fn get_bundle_identifier(app_name: &str) -> Option<String> {
 /// Set the application which delivers or schedules a notification
 pub fn set_application(bundle_ident: &str) -> NotificationResult<()> {
     unsafe {
-        ensure!(
-            !APPLICATION_SET,
-            ApplicationError::AlreadySet(bundle_ident.into())
-        );
-        APPLICATION_SET = true;
+        ensure!(!APPLICATION_SET, ApplicationError::AlreadySet(bundle_ident.into()));
         ensure!(
             sys::setApplication(NSString::from_str(bundle_ident).deref()),
             ApplicationError::CouldNotSet(bundle_ident.into())
         );
+        INIT_APPLICATION_SET.call_once(|| {
+            APPLICATION_SET = true;
+        });
         Ok(())
     }
 }
