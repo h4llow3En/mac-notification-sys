@@ -21,7 +21,7 @@ build = "build.rs"
 objc-foundation = "0.1.1"
 objc_id = "0.1.1"
 chrono = "0.4.0"
-dirs = "1.0"
+dirs-next = "2.0.0"
 
 [build-dependencies]
 cc = "1.0.17"

@@ -255,7 +255,7 @@ impl NotificationResponse {
 }
 
 pub(crate) fn check_sound(sound_name: &str) -> bool {
-    dirs::home_dir()
+    dirs_next::home_dir()
         .map(|path| path.join("/Library/Sounds/"))
         .into_iter()
         .chain(
