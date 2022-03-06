@@ -12,7 +12,6 @@
 pub mod error;
 mod notification;
 
-use chrono::offset::*;
 use error::{ApplicationError, NotificationError, NotificationResult};
 pub use notification::{MainButton, Notification, NotificationResponse};
 use objc_foundation::{INSDictionary, INSString, NSString};
@@ -58,7 +57,7 @@ pub fn send_notification(
     if let Some(options) = &options {
         if let Some(delivery_date) = options.delivery_date {
             ensure!(
-                delivery_date >= Utc::now().timestamp() as f64,
+                delivery_date >= time::OffsetDateTime::now_utc().unix_timestamp() as f64,
                 NotificationError::ScheduleInThePast
             );
         }
@@ -110,7 +109,10 @@ pub fn get_bundle_identifier(app_name: &str) -> Option<String> {
 /// Set the application which delivers or schedules a notification
 pub fn set_application(bundle_ident: &str) -> NotificationResult<()> {
     unsafe {
-        ensure!(!APPLICATION_SET, ApplicationError::AlreadySet(bundle_ident.into()));
+        ensure!(
+            !APPLICATION_SET,
+            ApplicationError::AlreadySet(bundle_ident.into())
+        );
         ensure!(
             sys::setApplication(NSString::from_str(bundle_ident).deref()),
             ApplicationError::CouldNotSet(bundle_ident.into())

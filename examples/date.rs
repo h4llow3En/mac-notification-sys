@@ -1,8 +1,7 @@
-use chrono::offset::*;
 use mac_notification_sys::*;
 
 fn main() {
-    let stamp = Utc::now().timestamp() as f64 + 5.;
+    let stamp = time::OffsetDateTime::now_utc().unix_timestamp() as f64 + 5.;
     println!("{:?}", stamp);
     let bundle = get_bundle_identifier_or_default("firefox");
     set_application(&bundle).unwrap();

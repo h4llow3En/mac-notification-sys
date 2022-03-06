@@ -20,7 +20,7 @@ build = "build.rs"
 [dependencies]
 objc-foundation = "0.1.1"
 objc_id = "0.1.1"
-chrono = "0.4.0"
+time = "0.3"
 dirs-next = "2.0.0"
 
 [build-dependencies]

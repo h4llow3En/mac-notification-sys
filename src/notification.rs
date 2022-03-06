@@ -115,8 +115,7 @@ impl<'a> Notification<'a> {
     ///
     /// ```no_run
     /// # use mac_notification_sys::*;
-    /// # use chrono::offset::*;
-    /// let stamp = Utc::now().timestamp() as f64 + 5.;
+    /// let stamp = time::OffsetDateTime::now_utc().unix_timestamp() as f64 + 5.;
     /// let _ = Notification::new().delivery_date(stamp);
     /// ```
     pub fn delivery_date(&mut self, delivery_date: f64) -> &mut Self {
