@@ -1,5 +1,6 @@
 # mac-notification-sys
 
+[![build](https://img.shields.io/github/workflow/status/h4llow3En/mac-notification-sys/Continuous%20Integration)](https://github.com/h4llow3En/mac-notification-sys/actions?query=workflow%3A"Continuous+Integration")
 ![Crates.io](https://img.shields.io/badge/platform-macOS-lightgrey?style=flat-square)
 [![license](https://img.shields.io/crates/l/mac-notification-sys?style=flat-square)](https://crates.io/crates/mac-notification-sys/)
 [![version](https://img.shields.io/crates/v/mac-notification-sys?style=flat-square)](https://crates.io/crates/mac-notification-sys/)

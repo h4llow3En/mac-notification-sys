@@ -4,6 +4,7 @@ version = "0.3.1"
 authors = ["Felix Döring <development@felixdoering.com>", "Hendrik Sollich <hendrik@hoodie.de>"]
 description = "Thin wrapper around macOS Notifications."
 edition = "2018"
+rust-version = "1.56"
 
 homepage = "https://github.com/h4llow3En/mac-notification-sys"
 repository = "https://github.com/h4llow3En/mac-notification-sys"
