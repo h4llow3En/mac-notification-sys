@@ -14,7 +14,7 @@ A simple wrapper to deliver or schedule macOS Notifications in Rust.
 ```toml
 #Cargo.toml
 [dependencies]
-mac-notification-sys = "0.3"
+mac-notification-sys = "0.4"
 ```
 
 ## Documentation
