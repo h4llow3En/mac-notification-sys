@@ -1,5 +1,5 @@
 //! A very thin wrapper around NSNotifications
-#![deny(
+#![warn(
     missing_docs,
     trivial_casts,
     trivial_numeric_casts,
@@ -48,6 +48,7 @@ mod sys {
 /// // deliver a silent notification
 /// let _ = send_notification("Title", None, "This is the body", None).unwrap();
 /// ```
+// #[deprecated(note="use `Notification::send`")]
 pub fn send_notification(
     title: &str,
     subtitle: Option<&str>,

@@ -6,7 +6,11 @@ use std::default::Default;
 use std::ops::Deref;
 use std::path::PathBuf;
 
+use crate::error::{NotificationError, NotificationResult};
+use crate::{ensure, get_bundle_identifier_or_default, set_application, sys, APPLICATION_SET};
+
 /// Possible actions accessible through the main button of the notification
+#[derive(Clone, Debug)]
 pub enum MainButton<'a> {
     /// Display a single action with the given name
     ///
@@ -17,6 +21,7 @@ pub enum MainButton<'a> {
     /// let _ = MainButton::SingleAction("Action name");
     /// ```
     SingleAction(&'a str),
+
     /// Display a dropdown with the given title, with a list of actions with given names
     ///
     /// # Example:
@@ -26,6 +31,7 @@ pub enum MainButton<'a> {
     /// let _ = MainButton::DropdownActions("Dropdown name", &["Action 1", "Action 2"]);
     /// ```
     DropdownActions(&'a str, &'a [&'a str]),
+
     /// Display a text input field with the given placeholder
     ///
     /// # Example:
@@ -38,8 +44,11 @@ pub enum MainButton<'a> {
 }
 
 /// Options to further customize the notification
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct Notification<'a> {
+    pub(crate) title: &'a str,
+    pub(crate) subtitle: Option<&'a str>,
+    pub(crate) message: &'a str,
     pub(crate) main_button: Option<MainButton<'a>>,
     pub(crate) close_button: Option<&'a str>,
     pub(crate) app_icon: Option<&'a str>,
@@ -53,6 +62,30 @@ impl<'a> Notification<'a> {
     /// Create a Notification to further customize the notification
     pub fn new() -> Self {
         Default::default()
+    }
+
+    /// Set `title` field
+    pub fn title(&mut self, title: &'a str) -> &mut Self {
+        self.title = title;
+        self
+    }
+
+    /// Set `subtitle` field
+    pub fn subtitle(&mut self, subtitle: &'a str) -> &mut Self {
+        self.subtitle = Some(subtitle);
+        self
+    }
+
+    /// Set `subtitle` field 
+    pub fn maybe_subtitle(&mut self, subtitle: Option<&'a str>) -> &mut Self {
+        self.subtitle = subtitle;
+        self
+    }
+
+    /// Set `message` field 
+    pub fn message(&mut self, message: &'a str) -> &mut Self {
+        self.message = message;
+        self
     }
 
     /// Allow actions through a main button
@@ -136,6 +169,19 @@ impl<'a> Notification<'a> {
         self
     }
 
+    /// Play a system sound when the notification is delivered
+    ///
+    /// # Example:
+    ///
+    /// ```no_run
+    /// # use mac_notification_sys::*;
+    /// let _ = Notification::new().sound("Blow");
+    /// ```
+    pub fn maybe_sound(&mut self, sound: Option<&'a str>) -> &mut Self {
+        self.sound = sound;
+        self
+    }
+
     /// Deliver the notification asynchronously (without waiting for an interaction).
     ///
     /// Note: Setting this to true is equivalent to a fire-and-forget.
@@ -201,6 +247,45 @@ impl<'a> Notification<'a> {
             }),
         ];
         NSDictionary::from_keys_and_objects(keys, vals)
+    }
+
+    /// Delivers a new notification
+    ///
+    /// Returns a `NotificationError` if a notification could not be delivered
+    ///
+    pub fn send(&self) -> NotificationResult<NotificationResponse> {
+        if let Some(delivery_date) = self.delivery_date {
+            ensure!(
+                delivery_date >= time::OffsetDateTime::now_utc().unix_timestamp() as f64,
+                NotificationError::ScheduleInThePast
+            );
+        };
+
+        let options = self.to_dictionary();
+
+        unsafe {
+            if !APPLICATION_SET {
+                let bundle = get_bundle_identifier_or_default("use_default");
+                set_application(&bundle).unwrap();
+            }
+            let dictionary_response = sys::sendNotification(
+                NSString::from_str(self.title).deref(),
+                NSString::from_str(self.subtitle.unwrap_or("")).deref(),
+                NSString::from_str(self.message).deref(),
+                options.deref(),
+            );
+            ensure!(
+                dictionary_response
+                    .deref()
+                    .object_for(NSString::from_str("error").deref())
+                    .is_none(),
+                NotificationError::UnableToDeliver
+            );
+
+            let response = NotificationResponse::from_dictionary(dictionary_response);
+
+            Ok(response)
+        }
     }
 }
 
