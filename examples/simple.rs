@@ -4,19 +4,17 @@ fn main() {
     let bundle = get_bundle_identifier_or_default("firefox");
     set_application(&bundle).unwrap();
 
-    send_notification(
-        "Danger",
-        Some("Will Robinson"),
-        "Run away as fast as you can",
-        None,
-    )
-    .unwrap();
+    Notification::default()
+        .title("Danger")
+        .subtitle("Will Robinson")
+        .message("Run away as fast as you can")
+        .send()
+        .unwrap();
 
-    send_notification(
-        "NOW",
-        None,
-        "Without subtitle",
-        Some(Notification::new().sound("Submarine")),
-    )
-    .unwrap();
+    Notification::default()
+        .title("NOW")
+        .message("Without subtitle")
+        .sound("Submarine")
+        .send()
+        .unwrap();
 }
