@@ -12,15 +12,18 @@ NSString* getBundleIdentifier(NSString* appName)
 // setApplication(new_bundle_identifier: &str) -> Result<()>
 BOOL setApplication(NSString* newbundleIdentifier)
 {
-    if (LSCopyApplicationURLsForBundleIdentifier((CFStringRef)newbundleIdentifier, NULL) != NULL)
+    @autoreleasepool
     {
-        [fakeBundleIdentifier release]; // Release old value - nil is ok
-        fakeBundleIdentifier = newbundleIdentifier;
-        [newbundleIdentifier retain]; // Retain new value - it outlives this scope
+        if (LSCopyApplicationURLsForBundleIdentifier((CFStringRef)newbundleIdentifier, NULL) != NULL)
+        {
+            [fakeBundleIdentifier release]; // Release old value - nil is ok
+            fakeBundleIdentifier = newbundleIdentifier;
+            [newbundleIdentifier retain]; // Retain new value - it outlives this scope
 
-        return YES;
+            return YES;
+        }
+        return NO;
     }
-    return NO;
 }
 
 // sendNotification(title: &str, subtitle: &str, message: &str, options: Notification) -> NotificationResult<()>
