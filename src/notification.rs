@@ -7,7 +7,7 @@ use std::ops::Deref;
 use std::path::PathBuf;
 
 use crate::error::{NotificationError, NotificationResult};
-use crate::{ensure, get_bundle_identifier_or_default, set_application, sys, APPLICATION_SET};
+use crate::{ensure, ensure_application_set, sys};
 
 /// Possible actions accessible through the main button of the notification
 #[derive(Clone, Debug)]
@@ -76,13 +76,13 @@ impl<'a> Notification<'a> {
         self
     }
 
-    /// Set `subtitle` field 
+    /// Set `subtitle` field
     pub fn maybe_subtitle(&mut self, subtitle: Option<&'a str>) -> &mut Self {
         self.subtitle = subtitle;
         self
     }
 
-    /// Set `message` field 
+    /// Set `message` field
     pub fn message(&mut self, message: &'a str) -> &mut Self {
         self.message = message;
         self
@@ -263,29 +263,27 @@ impl<'a> Notification<'a> {
 
         let options = self.to_dictionary();
 
-        unsafe {
-            if !APPLICATION_SET {
-                let bundle = get_bundle_identifier_or_default("use_default");
-                set_application(&bundle).unwrap();
-            }
-            let dictionary_response = sys::sendNotification(
+        ensure_application_set()?;
+
+        let dictionary_response = unsafe {
+            sys::sendNotification(
                 NSString::from_str(self.title).deref(),
                 NSString::from_str(self.subtitle.unwrap_or("")).deref(),
                 NSString::from_str(self.message).deref(),
                 options.deref(),
-            );
-            ensure!(
-                dictionary_response
-                    .deref()
-                    .object_for(NSString::from_str("error").deref())
-                    .is_none(),
-                NotificationError::UnableToDeliver
-            );
+            )
+        };
+        ensure!(
+            dictionary_response
+                .deref()
+                .object_for(NSString::from_str("error").deref())
+                .is_none(),
+            NotificationError::UnableToDeliver
+        );
 
-            let response = NotificationResponse::from_dictionary(dictionary_response);
+        let response = NotificationResponse::from_dictionary(dictionary_response);
 
-            Ok(response)
-        }
+        Ok(response)
     }
 }
 
