@@ -14,7 +14,10 @@ BOOL setApplication(NSString* newbundleIdentifier)
 {
     if (LSCopyApplicationURLsForBundleIdentifier((CFStringRef)newbundleIdentifier, NULL) != NULL)
     {
+        [fakeBundleIdentifier release]; // Release old value - nil is ok
         fakeBundleIdentifier = newbundleIdentifier;
+        [newbundleIdentifier retain]; // Retain new value - it outlives this scope
+
         return YES;
     }
     return NO;
