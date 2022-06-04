@@ -1,10 +1,9 @@
 use mac_notification_sys::*;
 
 #[test]
-#[should_panic]
 fn set_application_again() {
-    let _ = set_application("com.apple.Terminal").unwrap();
-    let _ = set_application("com.apple.Terminal").unwrap();
+    set_application("com.apple.Terminal").unwrap();
+    assert!(set_application("com.apple.Terminal").is_err());
 }
 
 #[test]
