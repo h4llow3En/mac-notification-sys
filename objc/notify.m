@@ -10,14 +10,25 @@ NSString* getBundleIdentifier(NSString* appName)
 }
 
 // setApplication(new_bundle_identifier: &str) -> Result<()>
+// invariant: this function should be called at most once and before `sendNotification`
 BOOL setApplication(NSString* newbundleIdentifier)
 {
-    if (LSCopyApplicationURLsForBundleIdentifier((CFStringRef)newbundleIdentifier, NULL) != NULL)
+    @autoreleasepool
     {
-        fakeBundleIdentifier = newbundleIdentifier;
-        return YES;
+        if (!installNSBundleHook())
+        {
+            return NO;
+        }
+        if (LSCopyApplicationURLsForBundleIdentifier((CFStringRef)newbundleIdentifier, NULL) != NULL)
+        {
+            [fakeBundleIdentifier release]; // Release old value - nil is ok
+            fakeBundleIdentifier = newbundleIdentifier;
+            [newbundleIdentifier retain]; // Retain new value - it outlives this scope
+
+            return YES;
+        }
+        return NO;
     }
-    return NO;
 }
 
 // sendNotification(title: &str, subtitle: &str, message: &str, options: Notification) -> NotificationResult<()>
@@ -25,12 +36,6 @@ NSDictionary* sendNotification(NSString* title, NSString* subtitle, NSString* me
 {
     @autoreleasepool
     {
-        if (!installNSBundleHook())
-        {
-            // TODO: Could potentially have different error messages
-            return @{@"error" : @""};
-        }
-
         // For a list of available notification options, see https://developer.apple.com/documentation/foundation/nsusernotification?language=objc
 
         NSUserNotificationCenter* notificationCenter = [NSUserNotificationCenter defaultUserNotificationCenter];

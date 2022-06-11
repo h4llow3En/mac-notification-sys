@@ -18,7 +18,6 @@ use objc_foundation::{INSDictionary, INSString, NSString};
 use std::ops::Deref;
 use std::sync::Once;
 
-static mut APPLICATION_SET: bool = false;
 static INIT_APPLICATION_SET: Once = Once::new();
 
 mod sys {
@@ -66,29 +65,27 @@ pub fn send_notification(
 
     let options = options.unwrap_or(&Notification::new()).to_dictionary();
 
-    unsafe {
-        if !APPLICATION_SET {
-            let bundle = get_bundle_identifier_or_default("use_default");
-            set_application(&bundle).unwrap();
-        }
-        let dictionary_response = sys::sendNotification(
+    ensure_application_set()?;
+
+    let dictionary_response = unsafe {
+        sys::sendNotification(
             NSString::from_str(title).deref(),
             NSString::from_str(subtitle.unwrap_or("")).deref(),
             NSString::from_str(message).deref(),
             options.deref(),
-        );
-        ensure!(
-            dictionary_response
-                .deref()
-                .object_for(NSString::from_str("error").deref())
-                .is_none(),
-            NotificationError::UnableToDeliver
-        );
+        )
+    };
+    ensure!(
+        dictionary_response
+            .deref()
+            .object_for(NSString::from_str("error").deref())
+            .is_none(),
+        NotificationError::UnableToDeliver
+    );
 
-        let response = NotificationResponse::from_dictionary(dictionary_response);
+    let response = NotificationResponse::from_dictionary(dictionary_response);
 
-        Ok(response)
-    }
+    Ok(response)
 }
 
 /// Search for a possible BundleIdentifier of a given appname.
@@ -101,26 +98,31 @@ pub fn get_bundle_identifier_or_default(app_name: &str) -> String {
 pub fn get_bundle_identifier(app_name: &str) -> Option<String> {
     unsafe {
         sys::getBundleIdentifier(NSString::from_str(app_name).deref()) // *const NSString
-            .as_ref() // Option<NSString>
-            .map(NSString::as_str)
-            .map(String::from)
+            .as_ref()
     }
+    .map(NSString::as_str)
+    .map(String::from)
+}
+
+/// Sets the application if not already set
+fn ensure_application_set() -> NotificationResult<()> {
+    if INIT_APPLICATION_SET.is_completed() {
+        return Ok(());
+    };
+    let bundle = get_bundle_identifier_or_default("use_default");
+    set_application(&bundle)
 }
 
 /// Set the application which delivers or schedules a notification
 pub fn set_application(bundle_ident: &str) -> NotificationResult<()> {
-    unsafe {
-        ensure!(
-            !APPLICATION_SET,
-            ApplicationError::AlreadySet(bundle_ident.into())
-        );
-        ensure!(
-            sys::setApplication(NSString::from_str(bundle_ident).deref()),
-            ApplicationError::CouldNotSet(bundle_ident.into())
-        );
-        INIT_APPLICATION_SET.call_once(|| {
-            APPLICATION_SET = true;
-        });
-        Ok(())
-    }
+    let mut result = Err(ApplicationError::AlreadySet(bundle_ident.into()).into());
+    INIT_APPLICATION_SET.call_once(|| {
+        let was_set = unsafe { sys::setApplication(NSString::from_str(bundle_ident).deref()) };
+        result = if was_set {
+            Ok(())
+        } else {
+            Err(ApplicationError::CouldNotSet(bundle_ident.into()).into())
+        };
+    });
+    result
 }
