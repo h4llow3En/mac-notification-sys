@@ -1,11 +1,18 @@
+<div align="center">
+
 # mac-notification-sys
 
-[![build](https://img.shields.io/github/workflow/status/h4llow3En/mac-notification-sys/Continuous%20Integration)](https://github.com/h4llow3En/mac-notification-sys/actions?query=workflow%3A"Continuous+Integration")
-![Crates.io](https://img.shields.io/badge/platform-macOS-lightgrey?style=flat-square)
-[![license](https://img.shields.io/crates/l/mac-notification-sys?style=flat-square)](https://crates.io/crates/mac-notification-sys/)
-[![version](https://img.shields.io/crates/v/mac-notification-sys?style=flat-square)](https://crates.io/crates/mac-notification-sys/)
-![Crates.io](https://img.shields.io/crates/d/mac-notification-sys?style=flat-square)
+![platform](https://img.shields.io/badge/platform-macOS-lightgrey)
+[![version](https://img.shields.io/crates/v/mac-notification-sys)](https://crates.io/crates/mac-notification-sys/)
+[![license](https://img.shields.io/crates/l/mac-notification-sys)](https://crates.io/crates/mac-notification-sys/)
+[![contributors](https://img.shields.io/github/contributors/h4llow3En/mac-notification-sys)](https://github.com/h4llow3En/mac-notification-sys/graphs/contributors)
 
+
+[![build](https://img.shields.io/github/workflow/status/h4llow3En/mac-notification-sys/Continuous%20Integration)](https://github.com/h4llow3En/mac-notification-sys/actions?query=workflow%3A"Continuous+Integration")
+![downloads](https://img.shields.io/crates/d/mac-notification-sys)
+[![documentation](https://img.shields.io/badge/docs-latest-blue.svg)](https://docs.rs/mac-notification-sys/)
+
+</div>
 
 A simple wrapper to deliver or schedule macOS Notifications in Rust.
 
@@ -14,7 +21,7 @@ A simple wrapper to deliver or schedule macOS Notifications in Rust.
 ```toml
 #Cargo.toml
 [dependencies]
-mac-notification-sys = "0.4"
+mac-notification-sys = "0.5"
 ```
 
 ## Documentation
@@ -60,3 +67,12 @@ fn main() {
  Thanks goes to these wonderful people:
  - [@hoodie](https://github.com/hoodie)
  - [@PandawanFr](https://github.com/PandawanFr)
+ - [Didrik Nordström](https://github.com/betamos)
+
+Any help in form of descriptive and friendly [issues](https://github.com/h4llow3En/mac-notification-sys/issues) or comprehensive pull requests are welcome! 
+
+
+Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in notify-rust by you, as defined in the Apache-2.0 license, shall be dual licensed as above, without any additional terms or conditions.
+
+### Conventions
+The Changelog of this library is generated from its commit log, there any commit message must conform with https://www.conventionalcommits.org/en/v1.0.0/. For simplicity you could make your commits with [convco](https://crates.io/crates/convco).
