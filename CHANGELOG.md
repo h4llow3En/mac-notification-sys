@@ -1,5 +1,23 @@
 # Changelog
 
+### [v0.5.1](https://github.com/hoodie/mac-notification-sys/compare/v0.5.0...v0.5.1) (2022-06-11)
+
+
+#### Fixes
+
+* assert on errors instead of panic in tests
+ 5369717
+
+* move installNSBundleHook to setApplication
+ 6bcce5f
+
+* Wrap setApplication in auto release pool
+ ead722b
+
+* retain bundle id NSString
+ 956124e
+
+
 ## [v0.5.0](https://github.com/hoodie/mac-notification-sys/compare/v0.4.0...v0.5.0) (2022-03-20)
 
 
