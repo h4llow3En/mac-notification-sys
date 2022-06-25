@@ -1,12 +1,24 @@
 #import "notify.h"
 
 // getBundleIdentifier(app_name: &str) -> "com.apple.Terminal"
-NSString* getBundleIdentifier(NSString* appName)
+NSString* getBundleIdentifier(NSString* requestedAppName)
 {
-    NSString* findString = [NSString stringWithFormat:@"get id of application \"%@\"", appName];
-    NSAppleScript* findScript = [[NSAppleScript alloc] initWithSource:findString];
-    NSAppleEventDescriptor* resultDescriptor = [findScript executeAndReturnError:nil];
-    return [resultDescriptor stringValue];
+    NSArray<NSRunningApplication*>* runningApps = [[NSWorkspace sharedWorkspace] runningApplications];
+
+    for (NSRunningApplication* runningApp in runningApps) {
+        NSString* appName = [runningApp localizedName];
+
+        if (appName == NULL) {
+            continue;
+        }
+
+        if ([appName isEqualToString:requestedAppName]) {
+            return [runningApp bundleIdentifier];
+        }
+
+    }
+
+    return NULL;
 }
 
 // setApplication(new_bundle_identifier: &str) -> Result<()>
