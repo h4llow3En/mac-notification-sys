@@ -1,5 +1,17 @@
 # Changelog
 
+### [v0.5.3](https://github.com/hoodie/mac-notification-sys/compare/v0.5.2...v0.5.3) (2022-07-10)
+
+
+#### Fixes
+
+* use NSRunningApplication instead of AppleScript
+ 9125aa0
+
+* convert to ARC memory management
+ afb0ad7
+
+
 ### [v0.5.2](https://github.com/hoodie/mac-notification-sys/compare/v0.5.1...v0.5.2) (2022-06-12)
 
 
