@@ -5,7 +5,8 @@ fn main() {
         cc::Build::new()
             .file("objc/notify.m")
             .flag("-fmodules")
-            .warnings(false)
+            .flag("-fobjc-arc")
+            .flag("-Wno-deprecated-declarations")
             .compile("notify");
     }
 }
