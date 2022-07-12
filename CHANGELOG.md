@@ -1,5 +1,14 @@
 # Changelog
 
+### [v0.5.4](https://github.com/hoodie/mac-notification-sys/compare/v0.5.3...v0.5.4) (2022-07-12)
+
+
+#### Fixes
+
+* reverting objc code to 0.5.2
+ 32ef45a
+, closes #43
+
 ### [v0.5.3](https://github.com/hoodie/mac-notification-sys/compare/v0.5.2...v0.5.3) (2022-07-10)
 
 
