@@ -1,5 +1,14 @@
 # Changelog
 
+### [v0.5.6](https://github.com/hoodie/mac-notification-sys/compare/v0.5.5...v0.5.6) (2022-08-06)
+
+
+#### Fixes
+
+* Always pass a macOS deployment version to cc
+ 41cc097
+
+
 ### [v0.5.5](https://github.com/hoodie/mac-notification-sys/compare/v0.5.4...v0.5.5) (2022-07-12)
 
 
