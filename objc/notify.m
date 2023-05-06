@@ -74,6 +74,10 @@ NSDictionary* sendNotification(NSString* title, NSString* subtitle, NSString* me
             userNotification.actionButtonTitle = options[@"mainButtonLabel"];
             userNotification.hasActionButton = 1;
         }
+        else
+        {
+            userNotification.hasActionButton = 0;
+        }
 
         // Dropdown actions
         if (options[@"actions"] && ![options[@"actions"] isEqualToString:@""]) {
