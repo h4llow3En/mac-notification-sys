@@ -17,7 +17,7 @@ fn main() {
         cc::Build::new()
             .file("objc/notify.m")
             .flag("-fmodules")
-            .flag("-Wno-deprecated-declarations")
+            //.flag("-Wno-deprecated-declarations")
             // `cc` doesn't try to pick up on this automatically, but `clang` needs it to
             // generate a "correct" Objective-C symbol table which better matches XCode.
             // See https://github.com/h4llow3En/mac-notification-sys/issues/45.
@@ -25,5 +25,7 @@ fn main() {
             .compile("notify");
 
         println!("cargo:rerun-if-env-changed={}", DEPLOYMENT_TARGET_VAR);
+        println!("cargo:rerun-if-changed=build.rs");
+        println!("cargo:rerun-if-changed=objc");
     }
 }
