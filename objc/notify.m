@@ -58,9 +58,16 @@ NSDictionary* sendNotification(NSString* title, NSString* subtitle, NSString* me
         userNotification.informativeText = message;
 
         // Notification sound
-        if (options[@"sound"] && ![options[@"sound"] isEqualToString:@""] && ![options[@"sound"] isEqualToString:@"_mute"])
+        if (options[@"sound"] && ![options[@"sound"] isEqualToString:@""])
         {
-            userNotification.soundName = options[@"sound"];
+            if ([options[@"sound"] isEqualToString:@"NSUserNotificationDefaultSoundName"])
+            {
+                userNotification.soundName = NSUserNotificationDefaultSoundName;
+            }
+            else
+            {
+                userNotification.soundName = options[@"sound"];
+            }
         }
 
         // Delivery Date/Schedule
