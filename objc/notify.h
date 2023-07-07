@@ -33,7 +33,8 @@ BOOL installNSBundleHook() {
 // Delegate to respond to events in the NSUserNotificationCenter
 // See https://developer.apple.com/documentation/foundation/nsusernotificationcenterdelegate?language=objc
 @implementation NotificationCenterDelegate
-- (void)userNotificationCenter:(NSUserNotificationCenter*)center didDeliverNotification:(NSUserNotification*)notification {
+- (void)userNotificationCenter:(NSUserNotificationCenter*)center
+        didDeliverNotification:(NSUserNotification*)notification {
     // Stop running if we're not expecting a response
     if (!notification.hasActionButton && !notification.hasReplyButton) {
         self.keepRunning = NO;
@@ -41,9 +42,9 @@ BOOL installNSBundleHook() {
 }
 
 // Most typical actions
-- (void)userNotificationCenter:(NSUserNotificationCenter*)center didActivateNotification:(NSUserNotification*)notification {
-    unsigned long long additionalActionIndex = ULLONG_MAX;
-    NSString* ActionsClicked = @"";
+- (void)userNotificationCenter:(NSUserNotificationCenter*)center
+       didActivateNotification:(NSUserNotification*)notification {
+    long long additionalActionIndex = ULONG_MAX;
 
     // Switch on how the notification was interacted with
     // See https://developer.apple.com/documentation/foundation/nsusernotification/1416143-activationtype?language=objc
@@ -53,7 +54,13 @@ BOOL installNSBundleHook() {
             if ([[(NSObject*)notification valueForKey:@"_alternateActionButtonTitles"] count] > 1) {
                 NSNumber* alternateActionIndex = [(NSObject*)notification valueForKey:@"_alternateActionIndex"];
                 additionalActionIndex = [alternateActionIndex unsignedLongLongValue];
-                ActionsClicked = [(NSObject*)notification valueForKey:@"_alternateActionButtonTitles"][additionalActionIndex];
+
+                if (additionalActionIndex == LONG_MAX) {
+                    self.actionData = @{@"activationType": @"actionClicked", @"activationValue": notification.actionButtonTitle};
+                    break;
+                }
+
+                NSString* ActionsClicked = [(NSObject*)notification valueForKey:@"_alternateActionButtonTitles"][additionalActionIndex];
 
                 self.actionData = @{@"activationType": @"actionClicked", @"activationValue": ActionsClicked, @"activationValueIndex": [NSString stringWithFormat:@"%llu", additionalActionIndex]};
             } else {
@@ -86,7 +93,8 @@ BOOL installNSBundleHook() {
 }
 
 // Specific to the close/other button
-- (void)userNotificationCenter:(NSUserNotificationCenter*)center didDismissAlert:(NSUserNotification*)notification {
+- (void)userNotificationCenter:(NSUserNotificationCenter*)center
+               didDismissAlert:(NSUserNotification*)notification {
     self.actionData = @{@"activationType": @"closeClicked", @"activationValue": notification.otherButtonTitle};
 
     // Stop running after interacting with the notification
