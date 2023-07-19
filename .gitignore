@@ -2,3 +2,6 @@ target
 *.swp
 Cargo.lock
 .vscode
+simple.app
+simple.log
+.DS_Store

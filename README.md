@@ -28,33 +28,40 @@ mac-notification-sys = "0.5"
 
 The documentation can be found [here](https://h4llow3en.github.io/mac-notification-sys/mac_notification_sys/)
 
+## RunLoop
+
+Core Foundation API requiring to run the RunLoop always in the main thread. There will be no effect to the
+notification delegates if you ran the NS loop from another thread. `winit` is already running this RunLoop
+on their main thread. So you do not have to deal with the run loop if you are using tauri/egui and other
+`winit` based application frameworks. Otherwise you have to manually run the run loop by using provided
+`run_ns_run_loop_once` method.
+
+## Bundling and Code Signing
+
+You must bundle your application to enable the new User Notification framework. Because
+`[UNUserNotificationCenter currentNotificationCenter]` method is looking for the bundle informations and
+you will get `bundleProxyForCurrentProcess is nil` error if you didn't run the application from a bundle.
+
+Also you have to code sign the bundle to enable the user notification. Otherwise you will get the
+`Notifications are not allowed for this application` error message.
+
+You can use Xcode sandbox entitlements to enable user notifications when you are developing an application.
+See the `bundle/run.sh` file to get an idea about the bundling a development app.
+
 ## Example
 
-```rust
-use mac_notification_sys::*;
+Please refer the `examples/simple.rs` file.
 
-fn main() {
-    let bundle = get_bundle_identifier_or_default("firefox");
-    set_application(&bundle).unwrap();
-
-    send_notification(
-        "Danger",
-        Some("Will Robinson"),
-        "Run away as fast as you can",
-        None,
-    )
-    .unwrap();
-
-    send_notification(
-        "NOW",
-        None,
-        "Without subtitle",
-        Some(Notification::new().sound("Blow")),
-    )
-    .unwrap();
-}
+Use below commands to run the example project:-
 
 ```
+export CERTIFICATE=mycertificatename
+./bundle/run.sh
+```
+
+`CERTIFICATE` variable should be a name of a self signed certificate. If you have an apple developer id, modify
+the script and run again. This command will create the `simple.app` in the project root folder and open it for you.
+Also a file called `simple.log` will create with the output.
 
 ## TODO
 

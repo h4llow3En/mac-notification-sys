@@ -1,10 +1,12 @@
 [package]
 name = "mac-notification-sys"
 version = "0.5.6"
-authors = ["Felix Döring <development@felixdoering.com>", "Hendrik Sollich <hendrik@hoodie.de>"]
+authors = [
+  "Felix Döring <development@felixdoering.com>",
+  "Hendrik Sollich <hendrik@hoodie.de>",
+]
 description = "Thin wrapper around macOS Notifications."
-edition = "2018"
-rust-version = "1.56"
+edition = "2021"
 
 homepage = "https://github.com/h4llow3En/mac-notification-sys"
 repository = "https://github.com/h4llow3En/mac-notification-sys"
@@ -14,15 +16,26 @@ license = "MIT"
 keywords = ["notification", "masOS", "osx", "notify"]
 readme = "README.md"
 
-include = ["Cargo.toml", "build.rs", "objc/*", "src/*.rs", "tests/*.rs"]
+include = ["Cargo.toml", "src/*.rs"]
 
-build = "build.rs"
+[[example]]
+name = "simple"
 
 [dependencies]
-objc-foundation = "0.1.1"
-objc_id = "0.1.1"
-time = "0.3"
-dirs-next = "2.0.0"
+objc2 = "0.4.0"
+icrate = { version = "0.0.3", features = [
+  "Foundation",
+  "UserNotifications_all",
+  "Foundation_NSArray",
+  "Foundation_NSString",
+  "Foundation_NSRunLoop",
+  "Foundation_NSError",
+  "Foundation_NSDate"
+] }
+bitflags = "^2.3"
+cron = "^0.12"
+url = "^2.4"
+futures = "^0.3"
 
-[build-dependencies]
-cc = "1.0.17"
+[dev-dependencies]
+async-io = "^1.13"
