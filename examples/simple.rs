@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use async_io::block_on;
-use mac_notification_sys::*;
+use mac_notification_sys::{*, notification::AuthorizationOptions};
 
 fn main() {
     std::thread::spawn(||{

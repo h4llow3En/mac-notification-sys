@@ -36,6 +36,8 @@ bitflags = "^2.3"
 cron = "^0.12"
 url = "^2.4"
 futures = "^0.3"
+chrono = "^0.4"
+uuid = {version = "^1.4", features = ["v4"]}
 
 [dev-dependencies]
 async-io = "^1.13"
