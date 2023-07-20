@@ -20,7 +20,7 @@ use cron::Schedule;
 use error::NotificationError;
 use futures::StreamExt;
 use icrate::block2::{Block, ConcreteBlock};
-use icrate::Foundation::{NSDate, NSError, NSRunLoop, NSString, NSDefaultRunLoopMode};
+use icrate::Foundation::{NSDate, NSError, NSRunLoop, NSString, NSDefaultRunLoopMode, NSInteger};
 use icrate::UserNotifications::{
     UNMutableNotificationContent, UNNotificationRequest, UNUserNotificationCenter,
 };
@@ -290,6 +290,47 @@ pub async fn request_authorization(
         current_notification_center.requestAuthorizationWithOptions_completionHandler(
             options.bits() as usize,
             auth_handler,
+        );
+    }
+
+    let received = receiver.next().await.unwrap();
+    receiver.close();
+
+    received.map_err(NotificationError::from)
+}
+
+/// Updating the badge count of the app's icon
+pub async fn set_badge_count(count: usize) -> Result<(), NotificationError> {
+    let current_notification_center =
+        unsafe { UNUserNotificationCenter::currentNotificationCenter() };
+
+    // TODO:- Replace this with oneshot after block2 supported FnOnce
+    // @see https://github.com/madsmtm/objc2/issues/168
+    let (sender, mut receiver) = futures::channel::mpsc::channel::<Result<(), Id<NSError>>>(1);
+    let arc_sender = Arc::new(Mutex::new(sender));
+
+    let completion_handler = ConcreteBlock::new(move |err: *mut NSError| {
+        let err = unsafe { err.as_ref() };
+        let mut sender_locked = arc_sender.lock().unwrap();
+        match err {
+            Some(err) => {
+                sender_locked.try_send(Err(err.retain())).unwrap();
+            }
+            None => {
+                sender_locked.try_send(Ok(())).unwrap();
+            }
+        }
+        sender_locked.close_channel();
+    });
+    let completion_handler = completion_handler.copy();
+    let completion_handler: &Block<_, ()> = &completion_handler;
+
+    let ns_int = NSInteger::from(count as isize);
+
+    unsafe {
+        current_notification_center.setBadgeCount_withCompletionHandler(
+            ns_int,
+            Some(completion_handler),
         );
     }
 
