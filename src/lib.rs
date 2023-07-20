@@ -1,4 +1,6 @@
-//! A very thin wrapper around NSNotifications
+//! A very thin wrapper around UNNotification
+//!
+//! Only supported for `macOS 10.14+`
 #![warn(
     missing_docs,
     trivial_casts,
@@ -9,120 +11,113 @@
 #![cfg(target_os = "macos")]
 #![allow(improper_ctypes)]
 
+use std::sync::{Arc, Mutex};
+
+use error::NotificationError;
+use futures::StreamExt;
+use icrate::block2::{Block, ConcreteBlock};
+use icrate::Foundation::{NSDate, NSDefaultRunLoopMode, NSError, NSInteger, NSRunLoop};
+use icrate::UserNotifications::UNUserNotificationCenter;
+use notification::AuthorizationOptions;
+use objc2::rc::Id;
+use objc2::runtime::Bool;
+use objc2::ClassType;
+
+mod delegate;
 pub mod error;
-mod notification;
+pub mod notification;
+pub mod builder;
 
-use error::{ApplicationError, NotificationError, NotificationResult};
-pub use notification::{MainButton, Notification, NotificationResponse};
-use objc_foundation::{INSDictionary, INSString, NSString};
-use std::ops::Deref;
-use std::sync::Once;
+pub use url::Url;
+pub use chrono::{DateTime, Offset, Local, Utc};
+pub use cron::Schedule;
 
-static INIT_APPLICATION_SET: Once = Once::new();
-
-mod sys {
-    use objc_foundation::{NSDictionary, NSString};
-    use objc_id::Id;
-    #[link(name = "notify")]
-    extern "C" {
-        pub fn sendNotification(
-            title: *const NSString,
-            subtitle: *const NSString,
-            message: *const NSString,
-            options: *const NSDictionary<NSString, NSString>,
-        ) -> Id<NSDictionary<NSString, NSString>>;
-        pub fn setApplication(newbundleIdentifier: *const NSString) -> bool;
-        pub fn getBundleIdentifier(appName: *const NSString) -> *const NSString;
-    }
-}
-
-/// Delivers a new notification
-///
-/// Returns a `NotificationError` if a notification could not be delivered
-///
-/// # Example:
-///
-/// ```no_run
-/// # use mac_notification_sys::*;
-/// // deliver a silent notification
-/// let _ = send_notification("Title", None, "This is the body", None).unwrap();
-/// ```
-// #[deprecated(note="use `Notification::send`")]
-pub fn send_notification(
-    title: &str,
-    subtitle: Option<&str>,
-    message: &str,
-    options: Option<&Notification>,
-) -> NotificationResult<NotificationResponse> {
-    if let Some(options) = &options {
-        if let Some(delivery_date) = options.delivery_date {
-            ensure!(
-                delivery_date >= time::OffsetDateTime::now_utc().unix_timestamp() as f64,
-                NotificationError::ScheduleInThePast
-            );
-        }
-    };
-
-    let options = options.unwrap_or(&Notification::new()).to_dictionary();
-
-    ensure_application_set()?;
-
-    let dictionary_response = unsafe {
-        sys::sendNotification(
-            NSString::from_str(title).deref(),
-            NSString::from_str(subtitle.unwrap_or("")).deref(),
-            NSString::from_str(message).deref(),
-            options.deref(),
-        )
-    };
-    ensure!(
-        dictionary_response
-            .deref()
-            .object_for(NSString::from_str("error").deref())
-            .is_none(),
-        NotificationError::UnableToDeliver
-    );
-
-    let response = NotificationResponse::from_dictionary(dictionary_response);
-
-    Ok(response)
-}
-
-/// Search for a possible BundleIdentifier of a given appname.
-/// Defaults to "com.apple.Finder" if no BundleIdentifier is found.
-pub fn get_bundle_identifier_or_default(app_name: &str) -> String {
-    get_bundle_identifier(app_name).unwrap_or_else(|| "com.apple.Finder".to_string())
-}
-
-/// Search for a BundleIdentifier of an given appname.
-pub fn get_bundle_identifier(app_name: &str) -> Option<String> {
+/// Run the RunLoop once
+pub fn run_ns_run_loop_once() {
     unsafe {
-        sys::getBundleIdentifier(NSString::from_str(app_name).deref()) // *const NSString
-            .as_ref()
+        let main_loop = NSRunLoop::mainRunLoop();
+        let limit_date = NSDate::dateWithTimeIntervalSinceNow(0.1);
+        main_loop.acceptInputForMode_beforeDate(NSDefaultRunLoopMode, &limit_date);
     }
-    .map(NSString::as_str)
-    .map(String::from)
 }
 
-/// Sets the application if not already set
-fn ensure_application_set() -> NotificationResult<()> {
-    if INIT_APPLICATION_SET.is_completed() {
-        return Ok(());
-    };
-    let bundle = get_bundle_identifier_or_default("use_default");
-    set_application(&bundle)
-}
+/// Requesting the authorization to send notifications
+///
+/// Returning an error if not allowed or any other error occured. Ok after accept one or many
+/// options.
+pub async fn request_authorization(options: AuthorizationOptions) -> Result<(), NotificationError> {
+    let current_notification_center =
+        unsafe { UNUserNotificationCenter::currentNotificationCenter() };
 
-/// Set the application which delivers or schedules a notification
-pub fn set_application(bundle_ident: &str) -> NotificationResult<()> {
-    let mut result = Err(ApplicationError::AlreadySet(bundle_ident.into()).into());
-    INIT_APPLICATION_SET.call_once(|| {
-        let was_set = unsafe { sys::setApplication(NSString::from_str(bundle_ident).deref()) };
-        result = if was_set {
-            Ok(())
-        } else {
-            Err(ApplicationError::CouldNotSet(bundle_ident.into()).into())
-        };
+    // TODO:- Replace this with oneshot after block2 supported FnOnce
+    // @see https://github.com/madsmtm/objc2/issues/168
+    let (sender, mut receiver) = futures::channel::mpsc::channel::<Result<(), Id<NSError>>>(1);
+    let arc_sender = Arc::new(Mutex::new(sender));
+
+    let auth_handler = ConcreteBlock::new(move |_granted: Bool, err: *mut NSError| {
+        let err = unsafe { err.as_ref() };
+        let mut sender_locked = arc_sender.lock().unwrap();
+        match err {
+            Some(err) => {
+                sender_locked.try_send(Err(err.retain())).unwrap();
+            }
+            None => {
+                sender_locked.try_send(Ok(())).unwrap();
+            }
+        }
+        sender_locked.close_channel();
     });
-    result
+    let auth_handler = auth_handler.copy();
+    let auth_handler: &Block<(Bool, *mut NSError), ()> = &auth_handler;
+
+    unsafe {
+        current_notification_center.requestAuthorizationWithOptions_completionHandler(
+            options.bits() as usize,
+            auth_handler,
+        );
+    }
+
+    let received = receiver.next().await.unwrap();
+    receiver.close();
+
+    received.map_err(NotificationError::from)
+}
+
+/// Updating the badge count of the app's icon
+pub async fn set_badge_count(count: usize) -> Result<(), NotificationError> {
+    let current_notification_center =
+        unsafe { UNUserNotificationCenter::currentNotificationCenter() };
+
+    // TODO:- Replace this with oneshot after block2 supported FnOnce
+    // @see https://github.com/madsmtm/objc2/issues/168
+    let (sender, mut receiver) = futures::channel::mpsc::channel::<Result<(), Id<NSError>>>(1);
+    let arc_sender = Arc::new(Mutex::new(sender));
+
+    let completion_handler = ConcreteBlock::new(move |err: *mut NSError| {
+        let err = unsafe { err.as_ref() };
+        let mut sender_locked = arc_sender.lock().unwrap();
+        match err {
+            Some(err) => {
+                sender_locked.try_send(Err(err.retain())).unwrap();
+            }
+            None => {
+                sender_locked.try_send(Ok(())).unwrap();
+            }
+        }
+        sender_locked.close_channel();
+    });
+    let completion_handler = completion_handler.copy();
+    let completion_handler: &Block<_, ()> = &completion_handler;
+
+    let ns_int = NSInteger::from(count as isize);
+
+    unsafe {
+        current_notification_center
+            .setBadgeCount_withCompletionHandler(ns_int, Some(completion_handler));
+    }
+
+    let received = receiver.next().await.unwrap();
+    receiver.close();
+
+    received.map_err(NotificationError::from)
 }

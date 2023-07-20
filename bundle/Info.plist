@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+    <dict>
+        <!--The executable-->
+        <key>CFBundleExecutable</key>
+        <string>simple-bin</string><!--This should be the name of the executable inside your MacOS folder-->
+
+        <!--Company name-->
+        <key>CFBundleIdentifier</key>
+        <string>com.mac-notification-sys.simple</string>
+
+        <!--Desired application name-->
+        <key>CFBundleName</key>
+        <string>Simple</string>
+
+        <!--icons file, located in the Resources folder-->
+        <key>CFBundleIconFile</key>
+        <string>rust-logo.icns</string>
+
+        <key>CFBundleDisplayName</key>
+        <string>Mac Notification SYS Simple</string>
+
+        <key>CFBundleDevelopmentRegion</key>
+        <string>en</string>
+        <key>CFBundleInfoDictionaryVersion</key>
+        <string>6.0</string>
+        <key>CFBundleShortVersionString</key>
+        <string>1.0</string>
+        <key>CFBundleVersion</key>
+        <string>1</string>
+    </dict>
+</plist>

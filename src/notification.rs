@@ -1,354 +1,282 @@
-//! Custom structs and enums for mac-notification-sys.
+//! Notification Types
+use bitflags::bitflags;
+use cron::Schedule;
+use std::{collections::HashMap, time::Duration};
+use url::Url;
 
-use objc_foundation::{INSDictionary, INSString, NSDictionary, NSString};
-use objc_id::Id;
-use std::default::Default;
-use std::ops::Deref;
-use std::path::PathBuf;
-
-use crate::error::{NotificationError, NotificationResult};
-use crate::{ensure, ensure_application_set, sys};
-
-/// Possible actions accessible through the main button of the notification
-#[derive(Clone, Debug)]
-pub enum MainButton<'a> {
-    /// Display a single action with the given name
+/// The data for a local or remote notification the system delivers to your app.
+#[derive(Debug, Clone)]
+pub struct Notification {
+    /// The unique identifier for the notification.
+    pub(crate) identifier: String,
+    /// The conditions that trigger the delivery of the notification.
+    pub(crate) trigger: Option<Trigger>,
+    /// The localized text that provides the notification’s primary description.
+    pub(crate) title: Option<String>,
+    /// The localized text that provides the notification’s secondary description.
+    pub(crate) subtitle: Option<String>,
+    /// The localized text that provides the notification’s main content.
+    pub(crate) body: String,
+    /// The visual and audio attachments to display alongside
+    /// the notification’s main content.
+    pub(crate) attachments: Vec<Attachment>,
+    /// The custom data to associate with the notification.
+    pub(crate) user_info: HashMap<String, String>,
+    /// The identifier that groups related notifications.
+    pub(crate) thread_identifier: Option<String>,
+    /// The identifier of the notification’s category.
+    pub(crate) category_identifier: Option<String>,
+    /// The text the system adds to the notification summary to
+    /// provide additional context.
+    pub(crate) summary_argument: Option<String>,
+    /// The number the system adds to the notification summary when the
+    /// notification represents multiple items.
+    pub(crate) summary_argument_count: Option<usize>,
+    /// The name of the image or storyboard to use when your app
+    /// launches because of the notification.
+    pub(crate) launch_image_name: Option<String>,
+    /// The number that your app’s icon displays.
+    pub(crate) badge: Option<usize>,
+    /// The value your app uses to determine which scene
+    /// to display to handle the notification.
+    pub(crate) target_content_identifier: Option<String>,
+    /// The sound that plays when the system delivers the notification.
+    pub(crate) sound: Option<Sound>,
+    /// The notification’s importance and required delivery timing.
     ///
-    /// # Example:
+    /// Platform Support:- macOS 12.0+
+    pub(crate) interruption_level: Option<InterruptionLevel>,
+    /// The score the system uses to determine if the notification
+    /// is the summary’s featured notification.
     ///
-    /// ```no_run
-    /// # use mac_notification_sys::*;
-    /// let _ = MainButton::SingleAction("Action name");
-    /// ```
-    SingleAction(&'a str),
-
-    /// Display a dropdown with the given title, with a list of actions with given names
+    /// Platform Support:- macOS 12.0+
+    pub(crate) relevance_score: Option<f32>,
+    /// The criteria the system evaluates to determine if it displays
+    /// the notification in the current Focus.
     ///
-    /// # Example:
-    ///
-    /// ```no_run
-    /// # use mac_notification_sys::*;
-    /// let _ = MainButton::DropdownActions("Dropdown name", &["Action 1", "Action 2"]);
-    /// ```
-    DropdownActions(&'a str, &'a [&'a str]),
-
-    /// Display a text input field with the given placeholder
-    ///
-    /// # Example:
-    ///
-    /// ```no_run
-    /// # use mac_notification_sys::*;
-    /// let _ = MainButton::Response("Enter some text...");
-    /// ```
-    Response(&'a str),
+    /// Platform Support:- macOS 13.0+
+    pub(crate) filter_criteria: Option<String>,
 }
 
-/// Options to further customize the notification
-#[derive(Clone, Default)]
-pub struct Notification<'a> {
-    pub(crate) title: &'a str,
-    pub(crate) subtitle: Option<&'a str>,
-    pub(crate) message: &'a str,
-    pub(crate) main_button: Option<MainButton<'a>>,
-    pub(crate) close_button: Option<&'a str>,
-    pub(crate) app_icon: Option<&'a str>,
-    pub(crate) content_image: Option<&'a str>,
-    pub(crate) delivery_date: Option<f64>,
-    pub(crate) sound: Option<&'a str>,
-    pub(crate) asynchronous: Option<bool>,
+/// The sound played upon delivery of a notification.
+#[derive(Debug, Clone, Default)]
+pub enum Sound {
+    /// default sound for notifications.
+    #[default]
+    Default,
+    /// Creates a sound object that represents a custom sound file.
+    /// <https://developer.apple.com/documentation/usernotifications/unnotificationsound/1649031-soundnamed?language=objc>
+    Named(String),
+    /// The default sound used for critical alerts.
+    DefaultCriticalSound,
+    /// Creates a sound object that plays the default critical alert
+    /// sound at the volume you specify. The volume must be a value
+    /// between 0.0 and 1.0.
+    DefaultCriticalSoundWithVolume(f32),
+    /// Creates a custom sound object for critical alerts.
+    CriticalSoundNamed(String),
+    /// Custom sound for critical alerts with the volume you specify.
+    CriticalSoundNamedWithVolume(String, f32),
+    /// Default ringtone of the iPad or iPhone. This method is not supported
+    /// for macOS.
+    DefaultRingtone,
+    /// Custom ringtone sound. This method is not supported for macOS
+    RingtoneSoundNamed(String),
 }
 
-impl<'a> Notification<'a> {
-    /// Create a Notification to further customize the notification
-    pub fn new() -> Self {
-        Default::default()
-    }
-
-    /// Set `title` field
-    pub fn title(&mut self, title: &'a str) -> &mut Self {
-        self.title = title;
-        self
-    }
-
-    /// Set `subtitle` field
-    pub fn subtitle(&mut self, subtitle: &'a str) -> &mut Self {
-        self.subtitle = Some(subtitle);
-        self
-    }
-
-    /// Set `subtitle` field
-    pub fn maybe_subtitle(&mut self, subtitle: Option<&'a str>) -> &mut Self {
-        self.subtitle = subtitle;
-        self
-    }
-
-    /// Set `message` field
-    pub fn message(&mut self, message: &'a str) -> &mut Self {
-        self.message = message;
-        self
-    }
-
-    /// Allow actions through a main button
-    ///
-    /// # Example:
-    ///
-    /// ```no_run
-    /// # use mac_notification_sys::*;
-    /// let _ = Notification::new().main_button(MainButton::SingleAction("Main button"));
-    /// ```
-    pub fn main_button(&mut self, main_button: MainButton<'a>) -> &mut Self {
-        self.main_button = Some(main_button);
-        self
-    }
-
-    /// Display a close button with the given name
-    ///
-    /// # Example:
-    ///
-    /// ```no_run
-    /// # use mac_notification_sys::*;
-    /// let _ = Notification::new().close_button("Close");
-    /// ```
-    pub fn close_button(&mut self, close_button: &'a str) -> &mut Self {
-        self.close_button = Some(close_button);
-        self
-    }
-
-    /// Display an icon on the left side of the notification
-    ///
-    /// NOTE: The icon of the app associated to the bundle will be displayed next to the notification title
-    ///
-    /// # Example:
-    ///
-    /// ```no_run
-    /// # use mac_notification_sys::*;
-    /// let _ = Notification::new().app_icon("/path/to/icon.icns");
-    /// ```
-    pub fn app_icon(&mut self, app_icon: &'a str) -> &mut Self {
-        self.app_icon = Some(app_icon);
-        self
-    }
-
-    /// Display an image on the right side of the notification
-    ///
-    /// # Example:
-    ///
-    /// ```no_run
-    /// # use mac_notification_sys::*;
-    /// let _ = Notification::new().content_image("/path/to/image.png");
-    /// ```
-    pub fn content_image(&mut self, content_image: &'a str) -> &mut Self {
-        self.content_image = Some(content_image);
-        self
-    }
-
-    /// Schedule the notification to be delivered at a later time
-    ///
-    /// # Example:
-    ///
-    /// ```no_run
-    /// # use mac_notification_sys::*;
-    /// let stamp = time::OffsetDateTime::now_utc().unix_timestamp() as f64 + 5.;
-    /// let _ = Notification::new().delivery_date(stamp);
-    /// ```
-    pub fn delivery_date(&mut self, delivery_date: f64) -> &mut Self {
-        self.delivery_date = Some(delivery_date);
-        self
-    }
-
-    /// Play a system sound when the notification is delivered
-    ///
-    /// # Example:
-    ///
-    /// ```no_run
-    /// # use mac_notification_sys::*;
-    /// let _ = Notification::new().sound("Blow");
-    /// ```
-    pub fn sound(&mut self, sound: &'a str) -> &mut Self {
-        self.sound = Some(sound);
-        self
-    }
-
-    /// Play a system sound when the notification is delivered
-    ///
-    /// # Example:
-    ///
-    /// ```no_run
-    /// # use mac_notification_sys::*;
-    /// let _ = Notification::new().sound("Blow");
-    /// ```
-    pub fn maybe_sound(&mut self, sound: Option<&'a str>) -> &mut Self {
-        self.sound = sound;
-        self
-    }
-
-    /// Deliver the notification asynchronously (without waiting for an interaction).
-    ///
-    /// Note: Setting this to true is equivalent to a fire-and-forget.
-    ///
-    /// # Example:
-    ///
-    /// ```no_run
-    /// # use mac_notification_sys::*;
-    /// let _ = Notification::new().asynchronous(true);
-    /// ```
-    pub fn asynchronous(&mut self, asynchronous: bool) -> &mut Self {
-        self.asynchronous = Some(asynchronous);
-        self
-    }
-
-    /// Convert the Notification to an Objective C NSDictionary
-    pub(crate) fn to_dictionary(&self) -> Id<NSDictionary<NSString, NSString>> {
-        // TODO: If possible, find a way to simplify this so I don't have to manually convert struct to NSDictionary
-        let keys = &[
-            &*NSString::from_str("mainButtonLabel"),
-            &*NSString::from_str("actions"),
-            &*NSString::from_str("closeButtonLabel"),
-            &*NSString::from_str("appIcon"),
-            &*NSString::from_str("contentImage"),
-            &*NSString::from_str("response"),
-            &*NSString::from_str("deliveryDate"),
-            &*NSString::from_str("asynchronous"),
-            &*NSString::from_str("sound"),
-        ];
-        let (main_button_label, actions, is_response): (&str, &[&str], bool) =
-            match &self.main_button {
-                Some(main_button) => match main_button {
-                    MainButton::SingleAction(main_button_label) => (main_button_label, &[], false),
-                    MainButton::DropdownActions(main_button_label, actions) => {
-                        (main_button_label, actions, false)
-                    }
-                    MainButton::Response(response) => (response, &[], true),
-                },
-                None => ("", &[], false),
-            };
-
-        let vals = vec![
-            NSString::from_str(main_button_label),
-            // TODO: Find a way to support NSArray as a NSDictionary Value rather than JUST NSString so I don't have to convert array to string and back
-            NSString::from_str(&actions.join(",")),
-            NSString::from_str(self.close_button.unwrap_or("")),
-            NSString::from_str(self.app_icon.unwrap_or("")),
-            NSString::from_str(self.content_image.unwrap_or("")),
-            // TODO: Same as above, if NSDictionary could support multiple types, this could be a boolean
-            NSString::from_str(if is_response { "yes" } else { "" }),
-            NSString::from_str(&match self.delivery_date {
-                Some(delivery_date) => delivery_date.to_string(),
-                _ => String::new(),
-            }),
-            // TODO: Same as above, if NSDictionary could support multiple types, this could be a boolean
-            NSString::from_str(match self.asynchronous {
-                Some(true) => "yes",
-                _ => "no",
-            }),
-            NSString::from_str(match self.sound {
-                Some(sound) if check_sound(sound) => sound,
-                _ => "_mute",
-            }),
-        ];
-        NSDictionary::from_keys_and_objects(keys, vals)
-    }
-
-    /// Delivers a new notification
-    ///
-    /// Returns a `NotificationError` if a notification could not be delivered
-    ///
-    pub fn send(&self) -> NotificationResult<NotificationResponse> {
-        if let Some(delivery_date) = self.delivery_date {
-            ensure!(
-                delivery_date >= time::OffsetDateTime::now_utc().unix_timestamp() as f64,
-                NotificationError::ScheduleInThePast
-            );
-        };
-
-        let options = self.to_dictionary();
-
-        ensure_application_set()?;
-
-        let dictionary_response = unsafe {
-            sys::sendNotification(
-                NSString::from_str(self.title).deref(),
-                NSString::from_str(self.subtitle.unwrap_or("")).deref(),
-                NSString::from_str(self.message).deref(),
-                options.deref(),
-            )
-        };
-        ensure!(
-            dictionary_response
-                .deref()
-                .object_for(NSString::from_str("error").deref())
-                .is_none(),
-            NotificationError::UnableToDeliver
-        );
-
-        let response = NotificationResponse::from_dictionary(dictionary_response);
-
-        Ok(response)
-    }
+/// Attachments to display in notification
+#[derive(Debug, Clone)]
+pub struct Attachment {
+    /// The unique identifier for the attachment.
+    pub(crate) identifier: String,
+    /// The URL of the file for this attachment.
+    pub(crate) url: Url,
+    pub(crate) options: Vec<AttachmentOptions>,
 }
 
-/// Response from the Notification
-#[derive(Debug)]
-pub enum NotificationResponse {
-    /// No interaction has occured
-    None,
-    /// User clicked on an action button with the given name
-    ActionButton(String),
-    /// User clicked on the close button with the given name
-    CloseButton(String),
-    /// User clicked the notification directly
-    Click,
-    /// User submitted text to the input text field
-    Reply(String),
+/// The trigger function
+#[derive(Debug, Clone)]
+pub enum TriggerKind {
+    /// A trigger condition that causes the system to deliver
+    /// a notification after the amount of time you specify elapses.
+    TimeInterval(Duration),
+    /// A trigger condition that causes a notification
+    /// the system delivers at a specific date and time.
+    Calendar(Schedule),
 }
 
-impl NotificationResponse {
-    /// Create a NotificationResponse from the given Objective C NSDictionary
-    pub(crate) fn from_dictionary(dictionary: Id<NSDictionary<NSString, NSString>>) -> Self {
-        let dictionary = dictionary.deref();
+/// The common behavior for subclasses that trigger the
+/// delivery of a local or remote notification.
+#[derive(Debug, Clone)]
+pub struct Trigger {
+    /// The trigger function
+    pub(crate) kind: TriggerKind,
+    /// A Boolean value indicating whether the system reschedules
+    /// the notification after it’s delivered.
+    pub(crate) repeats: bool,
+}
 
-        let activation_type = dictionary
-            .object_for(NSString::from_str("activationType").deref())
-            .map(|str| str.deref().as_str().to_owned());
+/// A type of notification your app supports and the custom
+/// actions that the system displays.
+#[derive(Debug, Clone)]
+pub struct Category {
+    /// The unique string assigned to the category.
+    pub(crate) identifier: String,
+    /// The actions to display when the system delivers
+    /// notifications of this type.
+    pub(crate) actions: Vec<Action>,
+    /// The intents related to notifications of this category.
+    pub(crate) intent_identifiers: Vec<String>,
+    /// Options for how to handle notifications of this type
+    pub(crate) options: CategoryOptions,
+    /// The placeholder text to display when the system
+    /// disables notification previews for the app.
+    pub(crate) hidden_preview_body_placeholder: Option<String>,
+    /// A format string for the summary description used when
+    /// the system groups the category’s notifications.
+    pub(crate) category_summary_format: Option<String>,
+}
 
-        match activation_type.as_deref() {
-            Some("actionClicked") => NotificationResponse::ActionButton(
-                match dictionary.object_for(NSString::from_str("activationValue").deref()) {
-                    Some(str) => str.deref().as_str().to_owned(),
-                    None => String::from(""),
-                },
-            ),
-            Some("closeClicked") => NotificationResponse::CloseButton(
-                match dictionary.object_for(NSString::from_str("activationValue").deref()) {
-                    Some(str) => str.deref().as_str().to_owned(),
-                    None => String::from(""),
-                },
-            ),
-            Some("replied") => NotificationResponse::Reply(
-                match dictionary.object_for(NSString::from_str("activationValue").deref()) {
-                    Some(str) => str.deref().as_str().to_owned(),
-                    None => String::from(""),
-                },
-            ),
-            Some("contentsClicked") => NotificationResponse::Click,
-            _ => NotificationResponse::None,
-        }
+/// A task your app performs in response to a notification that the system delivers.
+#[derive(Debug, Clone)]
+pub struct Action {
+    /// The unique string that your app uses to identify the action
+    pub(crate) identifier: String,
+    /// The localized string to use as the title of the action.
+    pub(crate) title: String,
+    /// The icon associated with the action.
+    pub(crate) icon: Option<ActionIcon>,
+    /// The behaviors associated with the action.
+    pub(crate) options: ActionOptions,
+}
+
+/// An icon associated with an action.
+#[derive(Debug, Clone)]
+pub enum ActionIcon {
+    /// Creates an action icon based on an image in your app’s bundle,
+    /// preferably in an asset catalog.
+    TemplateImageName(String),
+    /// Creates an action icon by using a system symbol image.
+    SystemImageName(String),
+}
+
+/// Which area need to show in the thumbnail
+///
+/// All the units should be 0-1. The origin of the coordinate
+/// system is the left bottom
+#[derive(Debug, Clone)]
+pub struct ThumbnailClippingRect {
+    /// Left bottom coordinate
+    pub(crate) origin: (f32, f32),
+    /// Size of the rectangle
+    pub(crate) size: (f32, f32),
+}
+
+/// Thumbnail time hint
+#[derive(Debug, Clone)]
+pub enum ThumbnailTimeKey {
+    /// Frame number of the animated image
+    FrameNumber(u32),
+    /// End of the movie. (Only supported for movies)
+    End,
+    /// Start of the movie
+    Start,
+    /// Time of the movie
+    Time(Duration),
+}
+
+/// Options for attachments
+#[derive(Debug, Clone)]
+pub enum AttachmentOptions {
+    /// A hint about an attachment’s file type.
+    TypeHintKey(String),
+    /// A Boolean value indicating whether the system hides
+    /// the attachment’s thumbnail.
+    ThumbnailHiddenKey(bool),
+    /// The clipping rectangle for a thumbnail image.
+    ThumbnailClippingRectKey(ThumbnailClippingRect),
+    /// The frame number of an animation to use as a thumbnail image.
+    ThumbnailTimeKey(ThumbnailTimeKey),
+}
+
+bitflags! {
+    /// The behaviors you can apply to an action.
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+    pub struct ActionOptions: u8 {
+        /// No option
+        const None = 0b000;
+        /// The action can be performed only on an unlocked device.
+        const AuthenticationRequired = 0b001;
+        /// The action performs a destructive task.
+        const Destructive = 0b010;
+        /// The action causes the app to launch in the foreground.
+        const Foreground = 0b100;
     }
+
+    /// Constants indicating how to handle notifications associated
+    /// with this category.
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+    pub struct CategoryOptions: u8 {
+        /// No options.
+        const None = 0b00000;
+        /// Send dismiss actions to the UNUserNotificationCenter object’s
+        /// delegate for handling.
+        const CustomDismissAction = 0b00001;
+        /// Allow CarPlay to display notifications of this type.
+        const AllowInCarPlay = 0b00010;
+        /// Show the notification’s title, even if the user has disabled notification
+        /// previews for the app.
+        const HiddenPreviewShowTitle = 0b00100;
+        /// Show the notification’s subtitle, even if the user has disabled
+        /// notification previews for the app.
+        const HiddenPreviewShowSubtitle = 0b01000;
+        /// An option that grants Siri permission to read incoming messages out loud when
+        /// the user has a compatible audio output device connected.
+        #[deprecated]
+        const AllowAnnouncement = 0b10000;
+    }
+
+    /// Options that determine the authorized features of
+    /// local and remote notifications.
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+    pub struct AuthorizationOptions: u8 {
+        /// No authorization options.
+        const None = 0b0000000;
+        /// The ability to update the app’s badge.
+        const Badge = 0b0000001;
+        /// The ability to play sounds.
+        const Sound = 0b0000010;
+        /// The ability to display alerts.
+        const Alert = 0b0000100;
+        /// The ability to display notifications in a CarPlay environment.
+        const CarPlay = 0b0001000;
+        /// The ability to play sounds for critical alerts.
+        const CriticalAlert = 0b0010000;
+        /// An option indicating the system should display a
+        /// button for in-app notification settings.
+        const ProvidesAppNotificationSettings = 0b0100000;
+        /// The ability to post noninterrupting notifications provisionally
+        /// to the Notification Center.
+        const Provisional = 0b1000000;
+    }
+
 }
 
-pub(crate) fn check_sound(sound_name: &str) -> bool {
-    dirs_next::home_dir()
-        .map(|path| path.join("/Library/Sounds/"))
-        .into_iter()
-        .chain(
-            [
-                "/Library/Sounds/",
-                "/Network/Library/Sounds/",
-                "/System/Library/Sounds/",
-            ]
-            .iter()
-            .map(PathBuf::from),
-        )
-        .map(|sound_path| sound_path.join(format!("{}.aiff", sound_name)))
-        .any(|some_path| some_path.exists())
+/// Constants that indicate the importance and delivery timing of a notification.
+///
+/// Platform Support:- macOS 12.0+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum InterruptionLevel {
+    /// The system presents the notification immediately, lights up
+    /// the screen, and can play a sound.
+    Active,
+    /// The system presents the notification immediately, lights up the screen,
+    /// and bypasses the mute switch to play a sound.
+    Critical,
+    /// The system adds the notification to the notification list
+    /// without lighting up the screen or playing a sound.
+    Passive,
+    /// The system presents the notification immediately, lights up the screen,
+    /// and can play a sound, but won’t break through system notification controls.
+    TimeSensitive,
 }
