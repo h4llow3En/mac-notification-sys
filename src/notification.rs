@@ -4,7 +4,6 @@ use objc_foundation::{INSDictionary, INSString, NSDictionary, NSString};
 use objc_id::Id;
 use std::default::Default;
 use std::ops::Deref;
-use std::path::PathBuf;
 
 use crate::error::{NotificationError, NotificationResult};
 use crate::{ensure, ensure_application_set, sys};
@@ -43,6 +42,24 @@ pub enum MainButton<'a> {
     Response(&'a str),
 }
 
+/// Helper to determine whether you want to play the default sound or custom one
+#[derive(Clone)]
+pub enum Sound {
+    /// notification plays the sound [`NSUserNotificationDefaultSoundName`](https://developer.apple.com/documentation/foundation/nsusernotification/nsusernotificationdefaultsoundname)
+    Default,
+    /// notification plays your custom sound
+    Custom(String),
+}
+
+impl<I> From<I> for Sound
+where
+    I: ToString,
+{
+    fn from(value: I) -> Self {
+        Sound::Custom(value.to_string())
+    }
+}
+
 /// Options to further customize the notification
 #[derive(Clone, Default)]
 pub struct Notification<'a> {
@@ -54,7 +71,7 @@ pub struct Notification<'a> {
     pub(crate) app_icon: Option<&'a str>,
     pub(crate) content_image: Option<&'a str>,
     pub(crate) delivery_date: Option<f64>,
-    pub(crate) sound: Option<&'a str>,
+    pub(crate) sound: Option<Sound>,
     pub(crate) asynchronous: Option<bool>,
 }
 
@@ -156,20 +173,34 @@ impl<'a> Notification<'a> {
         self
     }
 
-    /// Play a system sound when the notification is delivered
-    ///
+    /// Play the default sound `"NSUserNotificationDefaultSoundName"` system sound when the notification is delivered.
     /// # Example:
     ///
     /// ```no_run
     /// # use mac_notification_sys::*;
     /// let _ = Notification::new().sound("Blow");
     /// ```
-    pub fn sound(&mut self, sound: &'a str) -> &mut Self {
-        self.sound = Some(sound);
+    pub fn default_sound(&mut self) -> &mut Self {
+        self.sound = Some(Sound::Default);
         self
     }
 
-    /// Play a system sound when the notification is delivered
+    /// Play a system sound when the notification is delivered. Use [`Sound::Default`] to play the default sound.
+    /// # Example:
+    ///
+    /// ```no_run
+    /// # use mac_notification_sys::*;
+    /// let _ = Notification::new().sound("Blow");
+    /// ```
+    pub fn sound<S>(&mut self, sound: S) -> &mut Self
+    where
+        S: Into<Sound>,
+    {
+        self.sound = Some(sound.into());
+        self
+    }
+
+    /// Play a system sound when the notification is delivered. Use [`Sound::Default`] to play the default sound.
     ///
     /// # Example:
     ///
@@ -177,8 +208,11 @@ impl<'a> Notification<'a> {
     /// # use mac_notification_sys::*;
     /// let _ = Notification::new().sound("Blow");
     /// ```
-    pub fn maybe_sound(&mut self, sound: Option<&'a str>) -> &mut Self {
-        self.sound = sound;
+    pub fn maybe_sound<S>(&mut self, sound: Option<S>) -> &mut Self
+    where
+        S: Into<Sound>,
+    {
+        self.sound = sound.map(Into::into);
         self
     }
 
@@ -223,6 +257,12 @@ impl<'a> Notification<'a> {
                 None => ("", &[], false),
             };
 
+        let sound = match self.sound {
+            Some(Sound::Custom(ref name)) => name.as_str(),
+            Some(Sound::Default) => "NSUserNotificationDefaultSoundName",
+            None => "",
+        };
+
         let vals = vec![
             NSString::from_str(main_button_label),
             // TODO: Find a way to support NSArray as a NSDictionary Value rather than JUST NSString so I don't have to convert array to string and back
@@ -241,10 +281,7 @@ impl<'a> Notification<'a> {
                 Some(true) => "yes",
                 _ => "no",
             }),
-            NSString::from_str(match self.sound {
-                Some(sound) if check_sound(sound) => sound,
-                _ => "_mute",
-            }),
+            NSString::from_str(sound),
         ];
         NSDictionary::from_keys_and_objects(keys, vals)
     }
@@ -334,21 +371,4 @@ impl NotificationResponse {
             _ => NotificationResponse::None,
         }
     }
-}
-
-pub(crate) fn check_sound(sound_name: &str) -> bool {
-    dirs_next::home_dir()
-        .map(|path| path.join("/Library/Sounds/"))
-        .into_iter()
-        .chain(
-            [
-                "/Library/Sounds/",
-                "/Network/Library/Sounds/",
-                "/System/Library/Sounds/",
-            ]
-            .iter()
-            .map(PathBuf::from),
-        )
-        .map(|sound_path| sound_path.join(format!("{}.aiff", sound_name)))
-        .any(|some_path| some_path.exists())
 }

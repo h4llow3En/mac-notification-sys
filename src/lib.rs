@@ -13,7 +13,7 @@ pub mod error;
 mod notification;
 
 use error::{ApplicationError, NotificationError, NotificationResult};
-pub use notification::{MainButton, Notification, NotificationResponse};
+pub use notification::{MainButton, Notification, NotificationResponse, Sound};
 use objc_foundation::{INSDictionary, INSString, NSString};
 use std::ops::Deref;
 use std::sync::Once;

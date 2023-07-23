@@ -7,10 +7,18 @@ fn main() {
         .sound("Ping")
         .send()
         .unwrap();
+
     Notification::default()
         .title("🐟")
         .message("Submarine")
         .sound("Submarine")
+        .send()
+        .unwrap();
+
+    Notification::default()
+        .title("🥱")
+        .message("Default")
+        .sound(Sound::Default)
         .send()
         .unwrap();
 }
