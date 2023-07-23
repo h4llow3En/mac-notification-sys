@@ -65,9 +65,13 @@ Also a file called `simple.log` will create with the output.
 
 ## TODO
 
-- [ ] Add timeout option so notifications can be auto-closed
-- [ ] Allow NSDictionary to hold various types (perhaps with a union?)
-- [ ] Switch to UserNotification if possible
+- [] Migrate to no_std environment
+- [] Test on all the platforms
+  - [] MacOS
+  - [] IOS
+  - [] WatchOS
+  - [] IPadOS
+  - [] CatalystOS
 
 ## Contributors
 

@@ -1,14 +1,18 @@
 //! Builder for notifications
 
 use chrono::{DateTime, Local, TimeZone};
+use core::str::FromStr;
+use core::time::Duration;
 use cron::Schedule;
-use std::{collections::HashMap, str::FromStr, time::Duration};
+use std::collections::HashMap;
 use url::Url;
 
 use crate::notification::{
-    Action, ActionIcon, ActionOptions, Attachment, AttachmentOptions, Category, CategoryOptions,
-    InterruptionLevel, Notification, Sound, ThumbnailClippingRect, ThumbnailTimeKey, Trigger,
-    TriggerKind,
+    Action, ActionIcon, ActionOptions, AnimatedImageAttachmentOptions, Attachment,
+    AttachmentOptions, AudioAttachmentOptions, Category, CategoryOptions, ImageAttachmentOptions,
+    InterruptionLevel, Notification, Sound, ThumbnailClippingRect,
+    ThumbnailedAttachmentOptions, Trigger, TriggerKind, UnifiedAttachmentOptions,
+    VideoAttachmentOptions, VideoTime,
 };
 
 /// The data for a local or remote notification the system delivers to your app.
@@ -26,7 +30,7 @@ pub struct NotificationBuilder {
     body: String,
     /// The visual and audio attachments to display alongside
     /// the notification’s main content.
-    attachments: Vec<AttachmentBuilder>,
+    attachments: Vec<Attachment>,
     /// The custom data to associate with the notification.
     user_data: HashMap<String, String>,
     /// The identifier that groups related notifications.
@@ -110,13 +114,11 @@ impl NotificationBuilder {
         self
     }
 
-    /// Adding an attachment to the notification to display to user
-    ///
-    /// You can add local attachments by using `file` scheme.
-    pub fn attachment<'a, U: Into<Url>>(&'a mut self, url: U) -> &'a mut AttachmentBuilder {
-        let len = self.attachments.len();
-        self.attachments.push(AttachmentBuilder::new(url.into()));
-        self.attachments.get_mut(len).unwrap()
+    /// Attach a vide/image/audio to the notification.
+    /// Use the `AttachmentBuilder` to make an attachment.
+    pub fn attachment<'a, T>(&'a mut self, attachment: Attachment) -> &'a mut Self {
+        self.attachments.push(attachment);
+        self
     }
 
     /// Specifying the category of the notification
@@ -207,7 +209,14 @@ impl NotificationBuilder {
 
     /// Schedule the notification to repeat after some delay. The first
     /// notification will be delivered after elapsed the provided duration.
+    ///
+    /// The minimum duration is 1 minute
     pub fn interval<'a>(&'a mut self, duration: Duration) -> &'a mut Self {
+        assert!(
+            duration.as_secs() > 60,
+            "Duration should be grater than one minute"
+        );
+
         self.trigger = Some(Trigger {
             kind: TriggerKind::TimeInterval(duration),
             repeats: true,
@@ -226,6 +235,9 @@ impl NotificationBuilder {
 
     /// Schedule the notification for one time using a cron pattern
     /// The pattern should be in local timezone
+    ///
+    /// Only supporting the `*` mark pattern.
+    /// Ranges, Comma(`,`) separated lists and forward slashes(`/`) are not supported.
     pub fn cron_one_time<'a>(&'a mut self, schedule: Schedule) -> &'a mut Self {
         self.trigger = Some(Trigger {
             kind: TriggerKind::Calendar(schedule),
@@ -236,6 +248,9 @@ impl NotificationBuilder {
 
     /// Schedule the notification to repeat for a cron pattern
     /// The pattern should be in local timezone
+    ///
+    /// Only supporting the `*` mark pattern.
+    /// Ranges, Comma(`,`) separated lists and forward slashes(`/`) are not supported.
     pub fn cron<'a>(&'a mut self, schedule: Schedule) -> &'a mut Self {
         self.trigger = Some(Trigger {
             kind: TriggerKind::Calendar(schedule),
@@ -356,11 +371,7 @@ impl NotificationBuilder {
             title: self.title,
             subtitle: self.subtitle,
             body: self.body,
-            attachments: self
-                .attachments
-                .into_iter()
-                .map(|a| a.build())
-                .collect::<Vec<_>>(),
+            attachments: self.attachments,
             user_info: self.user_data,
             thread_identifier: self.thread_identifier,
             category_identifier: self.category_identifier,
@@ -378,20 +389,48 @@ impl NotificationBuilder {
 }
 
 /// The builder for notification attachments
-pub struct AttachmentBuilder {
+pub struct AttachmentBuilder<T> {
     /// The unique identifier for the attachment.
     identifier: Option<String>,
     /// The URL of the file for this attachment.
     url: Url,
-    options: Vec<AttachmentOptions>,
+    options: T,
 }
 
-impl AttachmentBuilder {
-    pub(crate) fn new(url: Url) -> AttachmentBuilder {
+impl<T> AttachmentBuilder<T> {
+    /// Create a new video attachment
+    pub fn video(url: Url) -> AttachmentBuilder<VideoAttachmentOptions> {
         AttachmentBuilder {
             url,
-            options: Vec::new(),
+            options: VideoAttachmentOptions::default(),
             identifier: None,
+        }
+    }
+
+    /// Create a new audio attachment
+    pub fn audio(url: Url) -> AttachmentBuilder<AudioAttachmentOptions> {
+        AttachmentBuilder {
+            url,
+            options: AudioAttachmentOptions::default(),
+            identifier: None
+        }
+    }
+
+    /// Create a new image attachment
+    pub fn image(url: Url) -> AttachmentBuilder<ImageAttachmentOptions> {
+        AttachmentBuilder {
+            url,
+            options: ImageAttachmentOptions::default(),
+            identifier: None
+        }
+    }
+
+    /// Create a new animated image attachment
+    pub fn animated_image(url: Url) -> AttachmentBuilder<AnimatedImageAttachmentOptions> {
+        AttachmentBuilder {
+            url,
+            options: AnimatedImageAttachmentOptions::default(),
+            identifier: None
         }
     }
 
@@ -401,95 +440,111 @@ impl AttachmentBuilder {
         self
     }
 
-    fn overwrite_option<F>(&mut self, predicate: F, new: AttachmentOptions)
-    where
-        F: Fn(&AttachmentOptions) -> bool,
-    {
-        self.options.retain(|o| !predicate(o));
-        self.options.push(new);
-    }
-
-    /// Hinting about the attachment type using a Uniform Type Identifier
-    /// <https://en.wikipedia.org/wiki/Uniform_Type_Identifier>
-    pub fn type_hint<'a, T: Into<String>>(&'a mut self, type_hint: T) -> &'a mut Self {
-        self.overwrite_option(
-            |o| matches!(o, AttachmentOptions::TypeHintKey(_)),
-            AttachmentOptions::TypeHintKey(type_hint.into()),
-        );
-        self
-    }
-
-    /// A Boolean value indicating whether the system hides
-    /// the attachment’s thumbnail.
-    pub fn hide_thumbnail<'a>(&'a mut self, hidden: bool) -> &'a mut Self {
-        self.overwrite_option(
-            |o| matches!(o, AttachmentOptions::ThumbnailHiddenKey(_)),
-            AttachmentOptions::ThumbnailHiddenKey(hidden),
-        );
-        self
-    }
-
-    /// Specify the time of the movie/video to capture the thumbnail
-    pub fn video_thumbnail_at_time<'a>(&'a mut self, duration: Duration) -> &'a mut Self {
-        self.overwrite_option(
-            |o| matches!(o, AttachmentOptions::ThumbnailTimeKey(_)),
-            AttachmentOptions::ThumbnailTimeKey(ThumbnailTimeKey::Time(duration)),
-        );
-        self
-    }
-
-    /// Capture the thumbnail from the begining of the video
-    pub fn video_thumbnail_at_start<'a>(&'a mut self) -> &'a mut Self {
-        self.overwrite_option(
-            |o| matches!(o, AttachmentOptions::ThumbnailTimeKey(_)),
-            AttachmentOptions::ThumbnailTimeKey(ThumbnailTimeKey::Start),
-        );
-        self
-    }
-
-    /// Capture the thumbnail from the end of the video
-    pub fn video_thumbnail_at_end<'a>(&'a mut self) -> &'a mut Self {
-        self.overwrite_option(
-            |o| matches!(o, AttachmentOptions::ThumbnailTimeKey(_)),
-            AttachmentOptions::ThumbnailTimeKey(ThumbnailTimeKey::End),
-        );
-        self
-    }
-
-    /// Capture the specific frame for thumbnail from the animated image
-    pub fn animation_thumbnail_frame<'a>(&'a mut self, frame: u32) -> &'a mut Self {
-        self.overwrite_option(
-            |o| matches!(o, AttachmentOptions::ThumbnailTimeKey(_)),
-            AttachmentOptions::ThumbnailTimeKey(ThumbnailTimeKey::FrameNumber(frame)),
-        );
-        self
-    }
-
-    /// Crop the thumbnail
-    ///
-    /// The coordinate system is starting from the left bottom corner. Right top corner is (1.0,
-    /// 1.0)
-    pub fn crop_thumbnail<'a>(&'a mut self, origin: (f32, f32), size: (f32, f32)) -> &'a mut Self {
-        self.overwrite_option(
-            |o| matches!(o, AttachmentOptions::ThumbnailClippingRectKey(_)),
-            AttachmentOptions::ThumbnailClippingRectKey(ThumbnailClippingRect { origin, size }),
-        );
-        self
-    }
-
-    /// Building the attachment
-    pub(crate) fn build(self) -> Attachment {
-        let identifier = if let Some(identifier) = self.identifier.clone().take() {
+    /// Generate an identifier if not provided
+    /// otherwise returning the existing id
+    fn generate_identifier(&self) -> String {
+        if let Some(identifier) = self.identifier.clone() {
             identifier
         } else {
             let uuid_v4 = uuid::Uuid::new_v4();
             uuid_v4.to_string()
-        };
+        }
+    }
+}
 
+impl<T: UnifiedAttachmentOptions> AttachmentBuilder<T> {
+    /// Specifying the encoded format when URL does not contain a file extension
+    pub fn format<'a>(&'a mut self, format: T::Format) -> &'a mut Self {
+        self.options.set_format(format);
+        self
+    }
+}
+
+impl<T: ThumbnailedAttachmentOptions> AttachmentBuilder<T> {
+    /// Showing a cropped part as the thumbnail
+    ///
+    /// The coordinate system is starting from the lower left corner(0.0, 0.0). And
+    /// the (1.0, 1.0) is the top right corner. The `origin` is also
+    /// referring the lower left corner in cropped part. See more:-
+    /// <https://developer.apple.com/documentation/corefoundation/cgrect?language=objc>
+    pub fn crop_thumbnail<'a>(&'a mut self, origin: (f32, f32), size: (f32, f32)) -> &'a mut Self {
+        self.options
+            .crop_thumbnail(ThumbnailClippingRect { origin, size });
+        self
+    }
+
+    /// Show/ hide the thumbnail of the attachment
+    pub fn hide_thumbnail<'a>(&'a mut self, hide: bool) -> &'a mut Self {
+        self.options.hide_thumbnail(hide);
+        self
+    }
+}
+
+impl AttachmentBuilder<AnimatedImageAttachmentOptions> {
+    /// Showing a specific frame using the frame number
+    pub fn thumbnail_frame<'a>(&'a mut self, frame_number: u64) -> &'a mut Self {
+        self.options.thumbnail_frame = Some(frame_number);
+        self
+    }
+
+    /// Build to an attachment
+    pub fn build(self) -> Attachment {
         Attachment {
-            identifier,
+            identifier: self.generate_identifier(),
             url: self.url,
-            options: self.options,
+            options: Some(AttachmentOptions::AnimatedImage(self.options)),
+        }
+    }
+}
+
+impl AttachmentBuilder<VideoAttachmentOptions> {
+
+    /// Show the thumbnail from the start scene of the video
+    pub fn thumbnail_from_start<'a>(&'a mut self) -> &'a mut Self {
+        self.options.thumbnail_time = Some(VideoTime::Start);
+        self
+    }
+
+    /// Show the thumbnail from the end scene of the video
+    pub fn thumbnail_from_end<'a>(&'a mut self) -> &'a mut Self {
+        self.options.thumbnail_time = Some(VideoTime::End);
+        self
+    }
+
+    /// Show the thumbnail at a specific time
+    pub fn thumbnail_time<'a>(&'a mut self, dur: Duration) -> &'a mut Self {
+        self.options.thumbnail_time = Some(VideoTime::Time(dur));
+        self
+    }
+
+    /// Build to an attachment
+    pub fn build(self) -> Attachment {
+        Attachment {
+            identifier: self.generate_identifier(),
+            url: self.url,
+            options: Some(AttachmentOptions::Video(self.options)),
+        }
+    }
+}
+
+impl AttachmentBuilder<ImageAttachmentOptions> {
+    /// Build to an attachment
+    pub fn build(self) -> Attachment {
+        Attachment {
+            identifier: self.generate_identifier(),
+            url: self.url,
+            options: Some(AttachmentOptions::Image(self.options)),
+        }
+    }
+}
+
+impl AttachmentBuilder<AudioAttachmentOptions> {
+    /// Build to an attachment
+    pub fn build(self) -> Attachment {
+        Attachment {
+            identifier: self.generate_identifier(),
+            url: self.url,
+            options: Some(AttachmentOptions::Audio(self.options)),
         }
     }
 }
@@ -586,6 +641,7 @@ impl CategoryBuilder {
     /// An option that grants Siri permission to read incoming messages out loud when
     /// the user has a compatible audio output device connected.
     #[deprecated]
+    #[allow(deprecated)]
     pub fn allow_announcements<'a>(&'a mut self) -> &'a mut Self {
         self.options |= CategoryOptions::AllowAnnouncement;
         self
@@ -699,7 +755,6 @@ fn datetime_to_schedule<Tz: TimeZone>(datetime: DateTime<Tz>) -> Schedule {
     let local_tz = Local;
     let local_date = datetime.with_timezone(&local_tz);
     let pattern = local_date.format("%S %M %H %-d %b * %Y").to_string();
-    dbg!(&pattern);
     let cron = Schedule::from_str(&pattern).unwrap();
     cron
 }

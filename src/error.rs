@@ -1,5 +1,5 @@
 //! Errors returning from the library
-use std::fmt::Debug;
+use core::fmt::Debug;
 
 use icrate::Foundation::NSError;
 use objc2::rc::Id;
@@ -9,6 +9,8 @@ use objc2::rc::Id;
 pub enum NotificationError {
     /// Error from the Objective C User Notifications framework
     NSError(Id<NSError>),
+    /// Not supported for the current OS version
+    NotSupported,
 }
 
 impl From<Id<NSError>> for NotificationError {
@@ -26,6 +28,9 @@ impl Debug for NotificationError {
                     .field("domain", &ns_error.domain().to_string())
                     .field("message", &ns_error.localizedDescription().to_string())
                     .finish()
+            },
+            NotificationError::NotSupported => {
+                f.write_str("NotSupported")
             }
         }
     }

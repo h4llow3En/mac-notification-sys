@@ -24,13 +24,20 @@ name = "simple"
 [dependencies]
 objc2 = "0.4.0"
 icrate = { version = "0.0.3", features = [
-  "Foundation",
   "UserNotifications_all",
+  "Foundation",
   "Foundation_NSArray",
   "Foundation_NSString",
   "Foundation_NSRunLoop",
   "Foundation_NSError",
-  "Foundation_NSDate"
+  "Foundation_NSDate",
+  "Foundation_NSDateComponents",
+  "Foundation_NSURL",
+  "Foundation_NSMutableDictionary",
+  "Foundation_NSNumber",
+  "Foundation_NSProcessInfo",
+  "Foundation_NSMutableArray",
+  "UniformTypeIdentifiers"
 ] }
 bitflags = "^2.3"
 cron = "^0.12"
@@ -38,6 +45,10 @@ url = "^2.4"
 futures = "^0.3"
 chrono = "^0.4"
 uuid = {version = "^1.4", features = ["v4"]}
+lazy_static = "^1.4"
 
 [dev-dependencies]
 async-io = "^1.13"
+
+[build-dependencies]
+cfg_aliases = "^0.1"
