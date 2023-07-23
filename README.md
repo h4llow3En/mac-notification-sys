@@ -8,7 +8,7 @@
 [![contributors](https://img.shields.io/github/contributors/h4llow3En/mac-notification-sys)](https://github.com/h4llow3En/mac-notification-sys/graphs/contributors)
 
 
-[![build](https://img.shields.io/github/workflow/status/h4llow3En/mac-notification-sys/Continuous%20Integration)](https://github.com/h4llow3En/mac-notification-sys/actions?query=workflow%3A"Continuous+Integration")
+[![build](https://img.shields.io/github/actions/workflow/status/h4llow3En/mac-notification-sys/ci.yml?branch=master)](https://github.com/h4llow3En/mac-notification-sys/actions?query=workflow%3A"Continuous+Integration")
 ![downloads](https://img.shields.io/crates/d/mac-notification-sys)
 [![documentation](https://img.shields.io/badge/docs-latest-blue.svg)](https://docs.rs/mac-notification-sys/)
 
