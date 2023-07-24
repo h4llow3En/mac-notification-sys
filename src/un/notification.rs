@@ -876,6 +876,8 @@ impl Into<Id<UNNotificationTrigger>> for Trigger {
 
 /// A type of notification your app supports and the custom
 /// actions that the system displays.
+///
+/// Use `CategoryBuilder` to construct instances
 #[derive(Debug, Clone, Default)]
 pub struct Category {
     /// The unique string assigned to the category.
@@ -1128,20 +1130,21 @@ impl Into<UNNotificationInterruptionLevel> for InterruptionLevel {
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
     use std::collections::HashMap;
+    use std::str::FromStr;
 
     use super::{
         Action, ActionIcon, ActionOptions, AnimatedImageAttachmentOptions, AnimatedImageFormat,
-        Attachment, AttachmentOptions, AudioAttachmentOptions, AudioFormat, ImageAttachmentOptions,
-        ImageFormat, Notification, Sound, ThumbnailClippingRect, Trigger, TriggerKind,
-        VideoAttachmentOptions, VideoFormat, VideoTime, InterruptionLevel, Category, CategoryOptions
+        Attachment, AttachmentOptions, AudioAttachmentOptions, AudioFormat, Category,
+        CategoryOptions, ImageAttachmentOptions, ImageFormat, InterruptionLevel, Notification,
+        Sound, ThumbnailClippingRect, Trigger, TriggerKind, VideoAttachmentOptions, VideoFormat,
+        VideoTime,
     };
     use crate::error::NotificationError;
     use cron::Schedule;
     use icrate::UserNotifications::{
-        UNNotificationAction, UNNotificationAttachment, UNNotificationRequest, UNNotificationSound,
-        UNNotificationTrigger, UNNotificationCategory
+        UNNotificationAction, UNNotificationAttachment, UNNotificationCategory,
+        UNNotificationRequest, UNNotificationSound, UNNotificationTrigger,
     };
     use objc2::rc::Id;
 
@@ -1694,7 +1697,10 @@ mod tests {
                 options: Some(AttachmentOptions::Video(VideoAttachmentOptions {
                     format: Some(VideoFormat::MPEG4),
                     thumbnail_time: Some(VideoTime::Time(std::time::Duration::from_secs(600))),
-                    thumbnail_crop: Some(ThumbnailClippingRect { origin: (0.1, 0.2), size: (0.4,0.6) }),
+                    thumbnail_crop: Some(ThumbnailClippingRect {
+                        origin: (0.1, 0.2),
+                        size: (0.4, 0.6),
+                    }),
                     thumbnail_hide: Some(false),
                 })),
             }],
@@ -1709,9 +1715,8 @@ mod tests {
             sound: Some(Sound::DefaultCriticalSound),
             interruption_level: Some(InterruptionLevel::Critical),
             relevance_score: Some(1.3),
-            filter_criteria: Some(String::from("testcriteria"))
+            filter_criteria: Some(String::from("testcriteria")),
         };
-
 
         let un_notification: Result<Id<UNNotificationRequest>, NotificationError> =
             notification.try_into();
@@ -1734,14 +1739,12 @@ mod tests {
     pub fn test_convert_category_all() {
         let category = Category {
             identifier: String::from("test"),
-            actions: vec![
-                Action {
-                    identifier: String::from("testaction"),
-                    title: String::from("test"),
-                    icon: Some(ActionIcon::SystemImageName(String::from("test"))),
-                    options: ActionOptions::all()
-                }
-            ],
+            actions: vec![Action {
+                identifier: String::from("testaction"),
+                title: String::from("test"),
+                icon: Some(ActionIcon::SystemImageName(String::from("test"))),
+                options: ActionOptions::all(),
+            }],
             intent_identifiers: vec![String::from("test")],
             hidden_preview_body_placeholder: Some(String::from("test preview")),
             category_summary_format: Some(String::from("test format")),

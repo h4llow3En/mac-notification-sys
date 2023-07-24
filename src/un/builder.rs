@@ -73,9 +73,9 @@ impl NotificationBuilder {
     /// Creating a new notification builder
     ///
     /// `body` :- The localized text that provides the notification’s main content.
-    pub fn new_with_body(body: String) -> NotificationBuilder {
+    pub fn new_with_body<S:Into<String>>(body: S) -> NotificationBuilder {
         Self {
-            body,
+            body: body.into(),
             ..Default::default()
         }
     }
@@ -357,7 +357,7 @@ impl NotificationBuilder {
     }
 
     /// Building the notification
-    pub fn build(self) -> Notification {
+    pub fn build(&self) -> Notification {
         let identifier = if let Some(identifier) = self.identifier.clone().take() {
             identifier
         } else {
@@ -367,23 +367,23 @@ impl NotificationBuilder {
 
         Notification {
             identifier,
-            trigger: self.trigger,
-            title: self.title,
-            subtitle: self.subtitle,
-            body: self.body,
-            attachments: self.attachments,
-            user_info: self.user_data,
-            thread_identifier: self.thread_identifier,
-            category_identifier: self.category_identifier,
-            summary_argument: self.summary_argument,
-            summary_argument_count: self.summary_argument_count,
-            launch_image_name: self.launch_image_name,
+            trigger: self.trigger.clone(),
+            title: self.title.clone(),
+            subtitle: self.subtitle.clone(),
+            body: self.body.clone(),
+            attachments: self.attachments.clone(),
+            user_info: self.user_data.clone(),
+            thread_identifier: self.thread_identifier.clone(),
+            category_identifier: self.category_identifier.clone(),
+            summary_argument: self.summary_argument.clone(),
+            summary_argument_count: self.summary_argument_count.clone(),
+            launch_image_name: self.launch_image_name.clone(),
             badge: self.badge,
-            target_content_identifier: self.target_content_identifier,
-            sound: self.sound,
+            target_content_identifier: self.target_content_identifier.clone(),
+            sound: self.sound.clone(),
             interruption_level: self.interruption_level,
             relevance_score: self.relevance_score,
-            filter_criteria: self.filter_criteria,
+            filter_criteria: self.filter_criteria.clone(),
         }
     }
 }
@@ -555,7 +555,7 @@ pub struct CategoryBuilder {
     identifier: Option<String>,
     /// The actions to display when the system delivers
     /// notifications of this type.
-    actions: Vec<ActionBuilder>,
+    actions: Vec<Action>,
     /// The intents related to notifications of this category.
     intent_identifiers: Vec<String>,
     /// Options for how to handle notifications of this type
@@ -648,15 +648,15 @@ impl CategoryBuilder {
     }
 
     /// A task your app performs in response to a notification that the system delivers.
-    pub fn action<'a, S: Into<String>>(&'a mut self, title: S) -> &'a mut ActionBuilder {
-        let action_builder = ActionBuilder::new_with_title(title);
-        let len = self.actions.len();
-        self.actions.push(action_builder);
-        self.actions.get_mut(len).unwrap()
+    ///
+    /// You can build actions using the `ActionBuilder`
+    pub fn action<'a>(&'a mut self, action: Action) -> &'a mut Self {
+        self.actions.push(action);
+        self
     }
 
     /// Building the category
-    pub fn build(self) -> Category {
+    pub fn build(&self) -> Category {
         let identifier = if let Some(identifier) = self.identifier.clone().take() {
             identifier
         } else {
@@ -665,11 +665,11 @@ impl CategoryBuilder {
         };
         Category {
             identifier,
-            actions: self.actions.into_iter().map(|a| a.build()).collect(),
-            intent_identifiers: self.intent_identifiers,
+            actions: self.actions.clone(),
+            intent_identifiers: self.intent_identifiers.clone(),
             options: self.options,
-            hidden_preview_body_placeholder: self.hidden_preview_body_placeholder,
-            category_summary_format: self.category_summary_format,
+            hidden_preview_body_placeholder: self.hidden_preview_body_placeholder.clone(),
+            category_summary_format: self.category_summary_format.clone(),
         }
     }
 }
@@ -687,7 +687,8 @@ pub struct ActionBuilder {
 }
 
 impl ActionBuilder {
-    pub(crate) fn new_with_title<S: Into<String>>(title: S) -> Self {
+    /// Create an action builder using the required title
+    pub fn new_with_title<S: Into<String>>(title: S) -> Self {
         Self {
             identifier: None,
             title: title.into(),
@@ -733,7 +734,8 @@ impl ActionBuilder {
         self
     }
 
-    pub(crate) fn build(self) -> Action {
+    /// Converting this builder to an action
+    pub fn build(self) -> Action {
         let identifier = if let Some(identifier) = self.identifier.clone().take() {
             identifier
         } else {

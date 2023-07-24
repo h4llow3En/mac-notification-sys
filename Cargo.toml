@@ -43,6 +43,7 @@ default = ["ns-first"]
 un = [
   "icrate/UserNotifications_all",
   "icrate/Foundation_NSArray",
+  "icrate/Foundation_NSSet",
   "icrate/Foundation_NSString",
   "icrate/Foundation_NSError",
   "icrate/Foundation_NSDateComponents",
