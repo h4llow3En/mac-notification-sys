@@ -25,9 +25,9 @@ use objc2::{rc::Id, ClassType};
 use std::{collections::HashMap, time::Duration};
 use url::Url;
 
-use crate::bind::CoreFoundation::kCFAllocatorDefault;
-use crate::bind::CoreGraphics::CGRectCreateDictionaryRepresentation;
-use crate::bind::CoreMedia::{
+use super::bind::CoreFoundation::kCFAllocatorDefault;
+use super::bind::CoreGraphics::CGRectCreateDictionaryRepresentation;
+use super::bind::CoreMedia::{
     kCMTimePositiveInfinity, kCMTimeZero, CMTime, CMTimeCopyAsDictionary, CMTimeMakeWithSeconds,
     NSEC_PER_SEC,
 };

@@ -1,18 +1,18 @@
 use std::time::Duration;
 
 use async_io::block_on;
-use mac_notification_sys::{*, notification::AuthorizationOptions};
+use mac_notification_sys::{*, un::notification::AuthorizationOptions};
 
 fn main() {
     std::thread::spawn(||{
         block_on(async {
             println!("Asking for authorization");
-            let authorized = request_authorization(AuthorizationOptions::Sound|AuthorizationOptions::Badge).await;
+            let authorized = un::request_authorization(AuthorizationOptions::Sound|AuthorizationOptions::Badge).await;
             println!("Finished authorization");
             match authorized {
                 Ok(()) => {
                     println!("User authorized for one or many options");
-                    let badge_updated = set_badge_count(30).await;
+                    let badge_updated = un::set_badge_count(30).await;
                     match badge_updated {
                         Ok(()) => {
                             println!("Badge updated");

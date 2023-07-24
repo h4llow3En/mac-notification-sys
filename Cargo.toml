@@ -24,28 +24,42 @@ name = "simple"
 [dependencies]
 objc2 = "0.4.0"
 icrate = { version = "0.0.3", features = [
-  "UserNotifications_all",
   "Foundation",
-  "Foundation_NSArray",
-  "Foundation_NSString",
-  "Foundation_NSRunLoop",
-  "Foundation_NSError",
-  "Foundation_NSDate",
-  "Foundation_NSDateComponents",
-  "Foundation_NSURL",
-  "Foundation_NSMutableDictionary",
-  "Foundation_NSNumber",
   "Foundation_NSProcessInfo",
-  "Foundation_NSMutableArray",
-  "UniformTypeIdentifiers"
+  "Foundation_NSDate",
+  "Foundation_NSRunLoop",
+
 ] }
-bitflags = "^2.3"
-cron = "^0.12"
-url = "^2.4"
+bitflags = {version="^2.3", optional = true}
+cron = {version = "^0.12", optional = true}
+url = {version ="^2.4", optional = true}
 futures = "^0.3"
-chrono = "^0.4"
-uuid = {version = "^1.4", features = ["v4"]}
+chrono = {version = "^0.4", optional = true}
+uuid = {version = "^1.4", features = ["v4"], optional = true}
 lazy_static = "^1.4"
+
+[features]
+default = ["ns-first"]
+un = [
+  "icrate/UserNotifications_all",
+  "icrate/Foundation_NSArray",
+  "icrate/Foundation_NSString",
+  "icrate/Foundation_NSError",
+  "icrate/Foundation_NSDateComponents",
+  "icrate/Foundation_NSURL",
+  "icrate/Foundation_NSMutableDictionary",
+  "icrate/Foundation_NSNumber",
+  "icrate/Foundation_NSMutableArray",
+  "icrate/UniformTypeIdentifiers",
+  "dep:uuid",
+  "dep:cron",
+  "dep:url",
+  "dep:bitflags",
+  "dep:chrono"
+]
+ns = []
+ns-first = ["un", "ns"]
+un-first = ["un", "ns"]
 
 [dev-dependencies]
 async-io = "^1.13"

@@ -7,7 +7,7 @@ use cron::Schedule;
 use std::collections::HashMap;
 use url::Url;
 
-use crate::notification::{
+use super::notification::{
     Action, ActionIcon, ActionOptions, AnimatedImageAttachmentOptions, Attachment,
     AttachmentOptions, AudioAttachmentOptions, Category, CategoryOptions, ImageAttachmentOptions,
     InterruptionLevel, Notification, Sound, ThumbnailClippingRect,
