@@ -1,24 +1,50 @@
 use mac_notification_sys::*;
 
 fn main() {
-    let bundle = get_bundle_identifier_or_default("firefox");
-    set_application(&bundle).unwrap();
     let response = send_notification(
-        "Danger",
-        Some("Will Robinson"),
-        "Run away as fast as you can",
+        "main button with drop down",
+        None,
+        "choose wisely",
+        Some(Notification::new().main_button(MainButton::DropdownActions(
+            "Dropdown",
+            &["Action 1", "Action 2"],
+        ))),
+    )
+    .unwrap();
+    handle_repsonse(response);
+
+    let response = send_notification(
+        "take response",
+        None,
+        "type what you want",
+        Some(Notification::new().main_button(MainButton::Response(r#"you want "foobar""#))),
+    )
+    .unwrap();
+    handle_repsonse(response);
+
+    let response = send_notification(
+        "Single Action",
+        None,
+        "ok?",
+        Some(Notification::new().main_button(MainButton::SingleAction("Ok"))),
+    )
+    .unwrap();
+    handle_repsonse(response);
+
+    let response = send_notification(
+        "close button only",
+        None,
+        "close it well",
         Some(
-            Notification::new()
-                .main_button(MainButton::DropdownActions(
-                    "Dropdown",
-                    &["Action 1", "Action 2"],
-                ))
-                .close_button("Nevermind..."),
+            Notification::new().close_button("Nevermind..."),
         ),
     )
     .unwrap();
+    handle_repsonse(response);
+}
 
-    match response {
+fn handle_repsonse(response: NotificationResponse) {
+    match dbg!(response) {
         // Requires main_button to be a MainButton::SingleAction or MainButton::DropdownActions
         NotificationResponse::ActionButton(action_name) => {
             if action_name == "Action 1" {
