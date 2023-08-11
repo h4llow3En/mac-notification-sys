@@ -1,5 +1,11 @@
 # Changelog
 
+### [v0.5.9](///compare/v0.5.8...v0.5.9) (2023-08-11)
+
+#### Fixes
+
+* do not crash when selecting the title of a drop down menu (ba226cd)
+
 ### [v0.5.8](///compare/v0.5.7...v0.5.8) (2023-07-23)
 
 #### Features
