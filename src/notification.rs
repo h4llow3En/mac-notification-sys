@@ -178,7 +178,7 @@ impl<'a> Notification<'a> {
     ///
     /// ```no_run
     /// # use mac_notification_sys::*;
-    /// let _ = Notification::new().sound("Blow");
+    /// let _ = Notification::new().default_sound();
     /// ```
     pub fn default_sound(&mut self) -> &mut Self {
         self.sound = Some(Sound::Default);
