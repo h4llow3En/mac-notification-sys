@@ -1,5 +1,16 @@
 # Changelog
 
+## [v0.6.0](///compare/v0.5.9...v0.6.0) (2023-08-12)
+
+### ⚠ BREAKING CHANGE
+
+* notifications do not show an unused "show" action button but default
+
+
+### Features
+
+* default to no action button (6bf2342)
+
 ### [v0.5.9](///compare/v0.5.8...v0.5.9) (2023-08-11)
 
 #### Fixes
