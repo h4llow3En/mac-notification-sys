@@ -1,7 +1,7 @@
 //! Custom errors for mac-notification-sys.
 
-use std::fmt;
 use std::error;
+use std::fmt;
 
 /// Custom Result type for mac-notification-sys.
 pub type NotificationResult<T> = Result<T, Error>;
@@ -21,13 +21,19 @@ mod application {
     impl fmt::Display for ApplicationError {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
             match self {
-                ApplicationError::AlreadySet(e) => write!(f, "Application '{}' can only be set once.", e),
-                ApplicationError::CouldNotSet(e) => write!(f, "Could not set application '{}', using default \"com.apple.Termial\"", e),
+                ApplicationError::AlreadySet(e) => {
+                    write!(f, "Application '{}' can only be set once.", e)
+                }
+                ApplicationError::CouldNotSet(e) => write!(
+                    f,
+                    "Could not set application '{}', using default \"com.apple.Termial\"",
+                    e
+                ),
             }
         }
     }
 
-    impl error::Error for ApplicationError { }
+    impl error::Error for ApplicationError {}
 }
 
 mod notification {
@@ -48,14 +54,16 @@ mod notification {
     impl fmt::Display for NotificationError {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
             match self {
-                NotificationError::ScheduleInThePast => write!(f, "Can not schedule notification in the past"),
+                NotificationError::ScheduleInThePast => {
+                    write!(f, "Can not schedule notification in the past")
+                }
                 NotificationError::UnableToSchedule => write!(f, "Could not schedule notification"),
                 NotificationError::UnableToDeliver => write!(f, "Could not deliver notification"),
             }
         }
     }
 
-    impl error::Error for NotificationError { }
+    impl error::Error for NotificationError {}
 }
 
 pub use self::application::ApplicationError;
@@ -67,7 +75,7 @@ pub enum Error {
     /// Application related Error
     Application(ApplicationError),
     /// Notification related Error
-    Notification(NotificationError)
+    Notification(NotificationError),
 }
 
 impl fmt::Display for Error {

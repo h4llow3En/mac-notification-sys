@@ -35,9 +35,7 @@ fn main() {
         "close button only",
         None,
         "close it well",
-        Some(
-            Notification::new().close_button("Nevermind..."),
-        ),
+        Some(Notification::new().close_button("Nevermind...")),
     )
     .unwrap();
     handle_repsonse(response);

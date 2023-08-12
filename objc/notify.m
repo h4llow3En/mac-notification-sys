@@ -73,9 +73,7 @@ NSDictionary* sendNotification(NSString* title, NSString* subtitle, NSString* me
             ncDelegate.keepRunning = YES;
             userNotification.actionButtonTitle = options[@"mainButtonLabel"];
             userNotification.hasActionButton = 1;
-        }
-        else
-        {
+        } else {
             userNotification.hasActionButton = 0;
         }
 
