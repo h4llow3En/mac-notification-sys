@@ -1,5 +1,11 @@
 # Changelog
 
+### [v0.6.1](///compare/v0.6.0...v0.6.1) (2023-08-12)
+
+#### Fixes
+
+* formatting and readme update (4b199d1)
+
 ## [v0.6.0](///compare/v0.5.9...v0.6.0) (2023-08-12)
 
 ### ⚠ BREAKING CHANGE
