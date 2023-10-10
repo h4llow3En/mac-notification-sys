@@ -346,24 +346,24 @@ impl NotificationResponse {
 
         let activation_type = dictionary
             .object_for(NSString::from_str("activationType").deref())
-            .map(|str| str.deref().as_str().to_owned());
+            .map(|str| str.as_str().to_owned());
 
         match activation_type.as_deref() {
             Some("actionClicked") => NotificationResponse::ActionButton(
                 match dictionary.object_for(NSString::from_str("activationValue").deref()) {
-                    Some(str) => str.deref().as_str().to_owned(),
+                    Some(str) => str.as_str().to_owned(),
                     None => String::from(""),
                 },
             ),
             Some("closeClicked") => NotificationResponse::CloseButton(
                 match dictionary.object_for(NSString::from_str("activationValue").deref()) {
-                    Some(str) => str.deref().as_str().to_owned(),
+                    Some(str) => str.as_str().to_owned(),
                     None => String::from(""),
                 },
             ),
             Some("replied") => NotificationResponse::Reply(
                 match dictionary.object_for(NSString::from_str("activationValue").deref()) {
-                    Some(str) => str.deref().as_str().to_owned(),
+                    Some(str) => str.as_str().to_owned(),
                     None => String::from(""),
                 },
             ),
