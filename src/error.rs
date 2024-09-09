@@ -26,7 +26,7 @@ mod application {
                 }
                 ApplicationError::CouldNotSet(e) => write!(
                     f,
-                    "Could not set application '{}', using default \"com.apple.Termial\"",
+                    "Could not set application '{}', using default \"com.apple.Terminal\"",
                     e
                 ),
             }
