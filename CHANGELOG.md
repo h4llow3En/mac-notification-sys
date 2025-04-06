@@ -1,5 +1,11 @@
 # Changelog
 
+### [v0.6.4](///compare/v0.6.3...v0.6.4) (2025-04-06)
+
+#### Features
+
+* update method signatures in header file (09b53af)
+
 ### [v0.6.3](///compare/v0.6.2...v0.6.3) (2025-04-06)
 
 #### Fixes
@@ -54,13 +60,13 @@ closes #64
 
 * Always pass a macOS deployment version to cc (41cc097)
 
-### [v0.5.5](///compare/v0.5.4...v0.5.5) (2022-07-12)
+### [v0.5.5](///compare/v0.5.4...v0.5.5) (2022-07-13)
 
 #### Fixes
 
 * reverting build.rs to 0.5.2 (5a48022)
 
-### [v0.5.4](///compare/v0.5.3...v0.5.4) (2022-07-12)
+### [v0.5.4](///compare/v0.5.3...v0.5.4) (2022-07-13)
 
 #### Fixes
 
