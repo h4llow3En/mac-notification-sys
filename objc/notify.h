@@ -5,6 +5,10 @@
 
 NSString* fakeBundleIdentifier = nil;
 
+NSString* getBundleIdentifier(NSString* appName);
+BOOL setApplication(NSString* newbundleIdentifier);
+NSDictionary* sendNotification(NSString* title, NSString* subtitle, NSString* message, NSDictionary* options);
+
 @implementation NSBundle (swizzle)
 - (NSString*)__bundleIdentifier {
     if (self == [NSBundle mainBundle]) {
@@ -15,7 +19,7 @@ NSString* fakeBundleIdentifier = nil;
 }
 @end
 
-BOOL installNSBundleHook() {
+BOOL installNSBundleHook(void) {
     Class class = objc_getClass("NSBundle");
     if (class) {
         method_exchangeImplementations(class_getInstanceMethod(class, @selector(bundleIdentifier)),

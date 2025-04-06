@@ -14,15 +14,15 @@ mod notification;
 
 use error::{ApplicationError, NotificationError, NotificationResult};
 pub use notification::{MainButton, Notification, NotificationResponse, Sound};
-use objc_foundation::{INSDictionary, INSString, NSString};
+use objc2_foundation::NSString;
 use std::ops::Deref;
 use std::sync::Once;
 
 static INIT_APPLICATION_SET: Once = Once::new();
 
 mod sys {
-    use objc_foundation::{NSDictionary, NSString};
-    use objc_id::Id;
+    use objc2::rc::Retained;
+    use objc2_foundation::{NSDictionary, NSString};
     #[link(name = "notify")]
     extern "C" {
         pub fn sendNotification(
@@ -30,7 +30,7 @@ mod sys {
             subtitle: *const NSString,
             message: *const NSString,
             options: *const NSDictionary<NSString, NSString>,
-        ) -> Id<NSDictionary<NSString, NSString>>;
+        ) -> Retained<NSDictionary<NSString, NSString>>;
         pub fn setApplication(newbundleIdentifier: *const NSString) -> bool;
         pub fn getBundleIdentifier(appName: *const NSString) -> *const NSString;
     }
@@ -77,8 +77,7 @@ pub fn send_notification(
     };
     ensure!(
         dictionary_response
-            .deref()
-            .object_for(NSString::from_str("error").deref())
+            .objectForKey(NSString::from_str("error").deref())
             .is_none(),
         NotificationError::UnableToDeliver
     );
@@ -100,8 +99,7 @@ pub fn get_bundle_identifier(app_name: &str) -> Option<String> {
         sys::getBundleIdentifier(NSString::from_str(app_name).deref()) // *const NSString
             .as_ref()
     }
-    .map(NSString::as_str)
-    .map(String::from)
+    .map(NSString::to_string)
 }
 
 /// Sets the application if not already set
