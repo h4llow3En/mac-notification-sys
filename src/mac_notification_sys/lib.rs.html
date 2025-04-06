@@ -1,345 +1,126 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source to the Rust file `src/lib.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>lib.rs.html -- source</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css"><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script src="../../storage.js"></script></head><body class="rustdoc source"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!"><img src="../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices"></div></div><script src="../../theme.js"></script><nav class="sub"><form class="search-form js-only"><div class="search-container"><input class="search-input" name="search" autocomplete="off" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><a id="settings-menu" href="../../settings.html"><img src="../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><pre class="line-numbers"><span id="1">  1</span>
-<span id="2">  2</span>
-<span id="3">  3</span>
-<span id="4">  4</span>
-<span id="5">  5</span>
-<span id="6">  6</span>
-<span id="7">  7</span>
-<span id="8">  8</span>
-<span id="9">  9</span>
-<span id="10"> 10</span>
-<span id="11"> 11</span>
-<span id="12"> 12</span>
-<span id="13"> 13</span>
-<span id="14"> 14</span>
-<span id="15"> 15</span>
-<span id="16"> 16</span>
-<span id="17"> 17</span>
-<span id="18"> 18</span>
-<span id="19"> 19</span>
-<span id="20"> 20</span>
-<span id="21"> 21</span>
-<span id="22"> 22</span>
-<span id="23"> 23</span>
-<span id="24"> 24</span>
-<span id="25"> 25</span>
-<span id="26"> 26</span>
-<span id="27"> 27</span>
-<span id="28"> 28</span>
-<span id="29"> 29</span>
-<span id="30"> 30</span>
-<span id="31"> 31</span>
-<span id="32"> 32</span>
-<span id="33"> 33</span>
-<span id="34"> 34</span>
-<span id="35"> 35</span>
-<span id="36"> 36</span>
-<span id="37"> 37</span>
-<span id="38"> 38</span>
-<span id="39"> 39</span>
-<span id="40"> 40</span>
-<span id="41"> 41</span>
-<span id="42"> 42</span>
-<span id="43"> 43</span>
-<span id="44"> 44</span>
-<span id="45"> 45</span>
-<span id="46"> 46</span>
-<span id="47"> 47</span>
-<span id="48"> 48</span>
-<span id="49"> 49</span>
-<span id="50"> 50</span>
-<span id="51"> 51</span>
-<span id="52"> 52</span>
-<span id="53"> 53</span>
-<span id="54"> 54</span>
-<span id="55"> 55</span>
-<span id="56"> 56</span>
-<span id="57"> 57</span>
-<span id="58"> 58</span>
-<span id="59"> 59</span>
-<span id="60"> 60</span>
-<span id="61"> 61</span>
-<span id="62"> 62</span>
-<span id="63"> 63</span>
-<span id="64"> 64</span>
-<span id="65"> 65</span>
-<span id="66"> 66</span>
-<span id="67"> 67</span>
-<span id="68"> 68</span>
-<span id="69"> 69</span>
-<span id="70"> 70</span>
-<span id="71"> 71</span>
-<span id="72"> 72</span>
-<span id="73"> 73</span>
-<span id="74"> 74</span>
-<span id="75"> 75</span>
-<span id="76"> 76</span>
-<span id="77"> 77</span>
-<span id="78"> 78</span>
-<span id="79"> 79</span>
-<span id="80"> 80</span>
-<span id="81"> 81</span>
-<span id="82"> 82</span>
-<span id="83"> 83</span>
-<span id="84"> 84</span>
-<span id="85"> 85</span>
-<span id="86"> 86</span>
-<span id="87"> 87</span>
-<span id="88"> 88</span>
-<span id="89"> 89</span>
-<span id="90"> 90</span>
-<span id="91"> 91</span>
-<span id="92"> 92</span>
-<span id="93"> 93</span>
-<span id="94"> 94</span>
-<span id="95"> 95</span>
-<span id="96"> 96</span>
-<span id="97"> 97</span>
-<span id="98"> 98</span>
-<span id="99"> 99</span>
-<span id="100">100</span>
-<span id="101">101</span>
-<span id="102">102</span>
-<span id="103">103</span>
-<span id="104">104</span>
-<span id="105">105</span>
-<span id="106">106</span>
-<span id="107">107</span>
-<span id="108">108</span>
-<span id="109">109</span>
-<span id="110">110</span>
-<span id="111">111</span>
-<span id="112">112</span>
-<span id="113">113</span>
-<span id="114">114</span>
-<span id="115">115</span>
-<span id="116">116</span>
-<span id="117">117</span>
-<span id="118">118</span>
-<span id="119">119</span>
-<span id="120">120</span>
-<span id="121">121</span>
-<span id="122">122</span>
-<span id="123">123</span>
-<span id="124">124</span>
-<span id="125">125</span>
-<span id="126">126</span>
-<span id="127">127</span>
-<span id="128">128</span>
-<span id="129">129</span>
-<span id="130">130</span>
-<span id="131">131</span>
-<span id="132">132</span>
-<span id="133">133</span>
-<span id="134">134</span>
-<span id="135">135</span>
-<span id="136">136</span>
-<span id="137">137</span>
-<span id="138">138</span>
-<span id="139">139</span>
-<span id="140">140</span>
-<span id="141">141</span>
-<span id="142">142</span>
-<span id="143">143</span>
-<span id="144">144</span>
-<span id="145">145</span>
-<span id="146">146</span>
-<span id="147">147</span>
-<span id="148">148</span>
-<span id="149">149</span>
-<span id="150">150</span>
-<span id="151">151</span>
-<span id="152">152</span>
-<span id="153">153</span>
-<span id="154">154</span>
-<span id="155">155</span>
-<span id="156">156</span>
-<span id="157">157</span>
-<span id="158">158</span>
-<span id="159">159</span>
-<span id="160">160</span>
-<span id="161">161</span>
-<span id="162">162</span>
-<span id="163">163</span>
-<span id="164">164</span>
-<span id="165">165</span>
-<span id="166">166</span>
-<span id="167">167</span>
-<span id="168">168</span>
-<span id="169">169</span>
-<span id="170">170</span>
-<span id="171">171</span>
-</pre><pre class="rust ">
-<span class="doccomment">//! A very thin wrapper around NSNotifications</span>
-<span class="attribute">#![<span class="ident">deny</span>(
-    <span class="ident">missing_docs</span>, <span class="ident">trivial_casts</span>, <span class="ident">trivial_numeric_casts</span>, <span class="ident">unused_import_braces</span>, <span class="ident">unused_qualifications</span>
-)]</span>
-<span class="attribute">#![<span class="ident">cfg</span>(<span class="ident">target_os</span> <span class="op">=</span> <span class="string">&quot;macos&quot;</span>)]</span>
-<span class="attribute">#![<span class="ident">allow</span>(<span class="ident">improper_ctypes</span>)]</span>
-
-<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">chrono</span>;
-<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">objc_foundation</span>;
-<span class="attribute">#[<span class="ident">macro_use</span>]</span>
-<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">failure</span>;
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">error</span>;
-
-<span class="kw">use</span> <span class="ident">chrono</span>::<span class="ident">offset</span>::<span class="kw-2">*</span>;
-<span class="kw">use</span> <span class="ident">error</span>::<span class="kw-2">*</span>;
-<span class="kw">use</span> <span class="ident">objc_foundation</span>::{<span class="ident">INSString</span>, <span class="ident">NSString</span>};
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">env</span>;
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">ops</span>::<span class="ident">Deref</span>;
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">path</span>::<span class="ident">PathBuf</span>;
-
-<span class="kw">static</span> <span class="kw-2">mut</span> <span class="ident">APPLICATION_SET</span>: <span class="ident">bool</span> <span class="op">=</span> <span class="bool-val">false</span>;
-
-<span class="kw">mod</span> <span class="ident">sys</span> {
-    <span class="kw">use</span> <span class="ident">objc_foundation</span>::<span class="ident">NSString</span>;
-    <span class="attribute">#[<span class="ident">link</span>(<span class="ident">name</span> <span class="op">=</span> <span class="string">&quot;notify&quot;</span>)]</span>
-    <span class="kw">extern</span> <span class="string">&quot;C&quot;</span> {
-        <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">scheduleNotification</span>(
-            <span class="ident">title</span>: <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">NSString</span>,
-            <span class="ident">subtitle</span>: <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">NSString</span>,
-            <span class="ident">message</span>: <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">NSString</span>,
-            <span class="ident">sound</span>: <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">NSString</span>,
-            <span class="ident">deliveryDate</span>: <span class="ident">f64</span>,
-        ) <span class="op">-&gt;</span> <span class="ident">bool</span>;
-        <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">sendNotification</span>(
-            <span class="ident">title</span>: <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">NSString</span>,
-            <span class="ident">subtitle</span>: <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">NSString</span>,
-            <span class="ident">message</span>: <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">NSString</span>,
-            <span class="ident">sound</span>: <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">NSString</span>,
-        ) <span class="op">-&gt;</span> <span class="ident">bool</span>;
-        <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">setApplication</span>(<span class="ident">newbundleIdentifier</span>: <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">NSString</span>) <span class="op">-&gt;</span> <span class="ident">bool</span>;
-        <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">getBundleIdentifier</span>(<span class="ident">appName</span>: <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">NSString</span>) <span class="op">-&gt;</span> <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">NSString</span>;
-    }
-}
-
-<span class="doccomment">/// Schedules a new notification in the NotificationCenter</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// Returns a `NotificationError` if a notification could not be scheduled</span>
-<span class="doccomment">/// or is scheduled in the past</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// # Example:</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// ```ignore</span>
-<span class="doccomment">/// extern crate chrono;</span>
-<span class="doccomment">/// # use mac_notification_sys::*;</span>
-<span class="doccomment">/// use chrono::offset::*;</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// // schedule a notification in 5 seconds</span>
-<span class="doccomment">/// let _ = schedule_notification(&quot;Title&quot;, &amp;None, &quot;This is the body&quot;, &amp;Some(&quot;Ping&quot;),</span>
-<span class="doccomment">///                               Utc::now().timestamp() as f64 + 5.).unwrap();</span>
-<span class="doccomment">/// ```</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">schedule_notification</span>(
-    <span class="ident">title</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
-    <span class="ident">subtitle</span>: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">&gt;</span>,
-    <span class="ident">message</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
-    <span class="ident">sound</span>: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">&gt;</span>,
-    <span class="ident">delivery_date</span>: <span class="ident">f64</span>,
-) <span class="op">-&gt;</span> <span class="ident">NotificationResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-    <span class="macro">ensure</span><span class="macro">!</span>(
-        <span class="ident">delivery_date</span> <span class="op">&gt;=</span> <span class="ident">Utc</span>::<span class="ident">now</span>().<span class="ident">timestamp</span>() <span class="kw">as</span> <span class="ident">f64</span>,
-        <span class="ident">NotificationError</span>::<span class="ident">ScheduleInThePast</span>
-    );
-
-    <span class="kw">let</span> <span class="ident">use_sound</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">sound</span> {
-        <span class="prelude-val">Some</span>(<span class="ident">sound</span>) <span class="kw">if</span> <span class="ident">check_sound</span>(<span class="ident">sound</span>) <span class="op">=&gt;</span> <span class="ident">sound</span>,
-        <span class="kw">_</span> <span class="op">=&gt;</span> <span class="string">&quot;_mute&quot;</span>,
-    };
-    <span class="kw">unsafe</span> {
-        <span class="macro">ensure</span><span class="macro">!</span>(
-            <span class="ident">sys</span>::<span class="ident">scheduleNotification</span>(
-                <span class="ident">NSString</span>::<span class="ident">from_str</span>(<span class="ident">title</span>).<span class="ident">deref</span>(),
-                <span class="ident">NSString</span>::<span class="ident">from_str</span>(<span class="ident">subtitle</span>.<span class="ident">unwrap_or</span>(<span class="string">&quot;&quot;</span>)).<span class="ident">deref</span>(),
-                <span class="ident">NSString</span>::<span class="ident">from_str</span>(<span class="ident">message</span>).<span class="ident">deref</span>(),
-                <span class="ident">NSString</span>::<span class="ident">from_str</span>(<span class="ident">use_sound</span>).<span class="ident">deref</span>(),
-                <span class="ident">delivery_date</span>,
-            ),
-            <span class="ident">NotificationError</span>::<span class="ident">UnableToSchedule</span>
-        );
-        <span class="prelude-val">Ok</span>(())
-    }
-}
-
-<span class="doccomment">/// Delivers a new notification</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// Returns a `NotificationError` if a notification could not be delivered</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// # Example:</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// ```no_run</span>
-<span class="doccomment">/// # use mac_notification_sys::*;</span>
-<span class="doccomment">/// // daliver a silent notification</span>
-<span class="doccomment">/// let _ = send_notification(&quot;Title&quot;, &amp;None, &quot;This is the body&quot;, &amp;None).unwrap();</span>
-<span class="doccomment">/// ```</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">send_notification</span>(
-    <span class="ident">title</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
-    <span class="ident">subtitle</span>: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">&gt;</span>,
-    <span class="ident">message</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
-    <span class="ident">sound</span>: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">&gt;</span>,
-) <span class="op">-&gt;</span> <span class="ident">NotificationResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">use_sound</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">sound</span> {
-        <span class="prelude-val">Some</span>(<span class="ident">sound</span>) <span class="kw">if</span> <span class="ident">check_sound</span>(<span class="ident">sound</span>) <span class="op">=&gt;</span> <span class="ident">sound</span>,
-        <span class="kw">_</span> <span class="op">=&gt;</span> <span class="string">&quot;_mute&quot;</span>,
-    };
-
-    <span class="kw">unsafe</span> {
-        <span class="macro">ensure</span><span class="macro">!</span>(
-            <span class="ident">sys</span>::<span class="ident">sendNotification</span>(
-                <span class="ident">NSString</span>::<span class="ident">from_str</span>(<span class="ident">title</span>).<span class="ident">deref</span>(),
-                <span class="ident">NSString</span>::<span class="ident">from_str</span>(<span class="ident">subtitle</span>.<span class="ident">unwrap_or</span>(<span class="string">&quot;&quot;</span>)).<span class="ident">deref</span>(),
-                <span class="ident">NSString</span>::<span class="ident">from_str</span>(<span class="ident">message</span>).<span class="ident">deref</span>(),
-                <span class="ident">NSString</span>::<span class="ident">from_str</span>(<span class="ident">use_sound</span>).<span class="ident">deref</span>()
-            ),
-            <span class="ident">NotificationError</span>::<span class="ident">UnableToDeliver</span>
-        );
-        <span class="prelude-val">Ok</span>(())
-    }
-}
-
-<span class="doccomment">/// Search for a possible BundleIdentifier of a given appname.</span>
-<span class="doccomment">/// Defaults to &quot;com.apple.Terminal&quot; if no BundleIdentifier is found.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_bundle_identifier_or_default</span>(<span class="ident">app_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-&gt;</span> <span class="ident">String</span> {
-    <span class="ident">get_bundle_identifier</span>(<span class="ident">app_name</span>).<span class="ident">unwrap_or</span>(<span class="string">&quot;com.apple.Terminal&quot;</span>.<span class="ident">to_string</span>())
-}
-
-<span class="doccomment">/// Search for a BundleIdentifier of an given appname.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_bundle_identifier</span>(<span class="ident">app_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
-    <span class="kw">unsafe</span> {
-        <span class="ident">sys</span>::<span class="ident">getBundleIdentifier</span>(<span class="ident">NSString</span>::<span class="ident">from_str</span>(<span class="ident">app_name</span>).<span class="ident">deref</span>()) <span class="comment">// *const NSString</span>
-            .<span class="ident">as_ref</span>() <span class="comment">// Option&lt;NSString&gt;</span>
-            .<span class="ident">map</span>(<span class="ident">NSString</span>::<span class="ident">as_str</span>)
-            .<span class="ident">map</span>(<span class="ident">String</span>::<span class="ident">from</span>)
-    }
-}
-
-<span class="doccomment">/// Set the application which delivers or schedules a notification</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">set_application</span>(<span class="ident">bundle_ident</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-&gt;</span> <span class="ident">NotificationResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-    <span class="kw">unsafe</span> {
-        <span class="macro">ensure</span><span class="macro">!</span>(<span class="op">!</span><span class="ident">APPLICATION_SET</span>, <span class="ident">ApplicationError</span>::<span class="ident">AlreadySet</span>);
-        <span class="ident">APPLICATION_SET</span> <span class="op">=</span> <span class="bool-val">true</span>;
-        <span class="macro">ensure</span><span class="macro">!</span>(
-            <span class="ident">sys</span>::<span class="ident">setApplication</span>(<span class="ident">NSString</span>::<span class="ident">from_str</span>(<span class="ident">bundle_ident</span>).<span class="ident">deref</span>()),
-            <span class="ident">ApplicationError</span>::<span class="ident">CouldNotSet</span>
-        );
-        <span class="prelude-val">Ok</span>(())
-    }
-}
-
-<span class="kw">fn</span> <span class="ident">check_sound</span>(<span class="ident">sound_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-&gt;</span> <span class="ident">bool</span> {
-    <span class="ident">env</span>::<span class="ident">home_dir</span>()
-        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">path</span><span class="op">|</span> <span class="ident">path</span>.<span class="ident">join</span>(<span class="string">&quot;/Library/Sounds/&quot;</span>))
-        .<span class="ident">into_iter</span>()
-        .<span class="ident">chain</span>(
-            [
-                <span class="string">&quot;/Library/Sounds/&quot;</span>,
-                <span class="string">&quot;/Network/Library/Sounds/&quot;</span>,
-                <span class="string">&quot;/System/Library/Sounds/&quot;</span>,
-            ].<span class="ident">into_iter</span>()
-                .<span class="ident">map</span>(<span class="ident">PathBuf</span>::<span class="ident">from</span>),
-        )
-        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">sound_path</span><span class="op">|</span> <span class="ident">sound_path</span>.<span class="ident">join</span>(<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}.aiff&quot;</span>, <span class="ident">sound_name</span>)))
-        .<span class="ident">any</span>(<span class="op">|</span><span class="ident">some_path</span><span class="op">|</span> <span class="ident">some_path</span>.<span class="ident">exists</span>())
-}
-</pre>
-</section><section id="search" class="content hidden"></section><section class="footer"></section><aside id="help" class="hidden"><div><h1 class="hidden">Help</h1><div class="shortcuts"><h2>Keyboard Shortcuts</h2><dl><dt><kbd>?</kbd></dt><dd>Show this help dialog</dd><dt><kbd>S</kbd></dt><dd>Focus the search field</dd><dt><kbd>↑</kbd></dt><dd>Move up in search results</dd><dt><kbd>↓</kbd></dt><dd>Move down in search results</dd><dt><kbd>↹</kbd></dt><dd>Switch tab</dd><dt><kbd>&#9166;</kbd></dt><dd>Go to active search result</dd><dt><kbd>+</kbd></dt><dd>Expand all sections</dd><dt><kbd>-</kbd></dt><dd>Collapse all sections</dd></dl></div><div class="infos"><h2>Search Tricks</h2><p>Prefix searches with a type followed by a colon (e.g. <code>fn:</code>) to restrict the search to a given type.</p><p>Accepted types are: <code>fn</code>, <code>mod</code>, <code>struct</code>, <code>enum</code>, <code>trait</code>, <code>type</code>, <code>macro</code>, and <code>const</code>.</p><p>Search functions by type signature (e.g. <code>vec -> usize</code> or <code>* -> vec</code>)</p><p>Search multiple things at once by splitting your query with comma (e.g. <code>str,u8</code> or <code>String,struct:Vec,test</code>)</p></div></div></aside><script>window.rootPath = "../../";window.currentCrate = "mac_notification_sys";</script><script src="../../aliases.js"></script><script src="../../main.js"></script><script defer src="../../search-index.js"></script></body></html>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/lib.rs`."><title>lib.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-6c3ea77c.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="mac_notification_sys" data-themes="" data-resource-suffix="" data-rustdoc-version="1.86.0 (05f9846f8 2025-03-31)" data-channel="1.86.0" data-search-js="search-581efc7a.js" data-settings-js="settings-6dad6058.js" ><script src="../../static.files/storage-3a5871a4.js"></script><script defer src="../../static.files/src-script-b8d3f215.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-4d63596a.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-893ab5e7.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">mac_notification_sys/</div>lib.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! A very thin wrapper around NSNotifications
+<a href=#2 id=2 data-nosnippet>2</a></span><span class="attr">#![warn(
+<a href=#3 id=3 data-nosnippet>3</a>    missing_docs,
+<a href=#4 id=4 data-nosnippet>4</a>    trivial_casts,
+<a href=#5 id=5 data-nosnippet>5</a>    trivial_numeric_casts,
+<a href=#6 id=6 data-nosnippet>6</a>    unused_import_braces,
+<a href=#7 id=7 data-nosnippet>7</a>    unused_qualifications
+<a href=#8 id=8 data-nosnippet>8</a>)]
+<a href=#9 id=9 data-nosnippet>9</a>#![cfg(target_os = <span class="string">"macos"</span>)]
+<a href=#10 id=10 data-nosnippet>10</a>#![allow(improper_ctypes)]
+<a href=#11 id=11 data-nosnippet>11</a>
+<a href=#12 id=12 data-nosnippet>12</a></span><span class="kw">pub mod </span>error;
+<a href=#13 id=13 data-nosnippet>13</a><span class="kw">mod </span>notification;
+<a href=#14 id=14 data-nosnippet>14</a>
+<a href=#15 id=15 data-nosnippet>15</a><span class="kw">use </span>error::{ApplicationError, NotificationError, NotificationResult};
+<a href=#16 id=16 data-nosnippet>16</a><span class="kw">pub use </span>notification::{MainButton, Notification, NotificationResponse, Sound};
+<a href=#17 id=17 data-nosnippet>17</a><span class="kw">use </span>objc2_foundation::NSString;
+<a href=#18 id=18 data-nosnippet>18</a><span class="kw">use </span>std::ops::Deref;
+<a href=#19 id=19 data-nosnippet>19</a><span class="kw">use </span>std::sync::Once;
+<a href=#20 id=20 data-nosnippet>20</a>
+<a href=#21 id=21 data-nosnippet>21</a><span class="kw">static </span>INIT_APPLICATION_SET: Once = Once::new();
+<a href=#22 id=22 data-nosnippet>22</a>
+<a href=#23 id=23 data-nosnippet>23</a><span class="kw">mod </span>sys {
+<a href=#24 id=24 data-nosnippet>24</a>    <span class="kw">use </span>objc2::rc::Retained;
+<a href=#25 id=25 data-nosnippet>25</a>    <span class="kw">use </span>objc2_foundation::{NSDictionary, NSString};
+<a href=#26 id=26 data-nosnippet>26</a>    <span class="attr">#[link(name = <span class="string">"notify"</span>)]
+<a href=#27 id=27 data-nosnippet>27</a>    </span><span class="kw">extern </span><span class="string">"C" </span>{
+<a href=#28 id=28 data-nosnippet>28</a>        <span class="kw">pub fn </span>sendNotification(
+<a href=#29 id=29 data-nosnippet>29</a>            title: <span class="kw-2">*const </span>NSString,
+<a href=#30 id=30 data-nosnippet>30</a>            subtitle: <span class="kw-2">*const </span>NSString,
+<a href=#31 id=31 data-nosnippet>31</a>            message: <span class="kw-2">*const </span>NSString,
+<a href=#32 id=32 data-nosnippet>32</a>            options: <span class="kw-2">*const </span>NSDictionary&lt;NSString, NSString&gt;,
+<a href=#33 id=33 data-nosnippet>33</a>        ) -&gt; Retained&lt;NSDictionary&lt;NSString, NSString&gt;&gt;;
+<a href=#34 id=34 data-nosnippet>34</a>        <span class="kw">pub fn </span>setApplication(newbundleIdentifier: <span class="kw-2">*const </span>NSString) -&gt; bool;
+<a href=#35 id=35 data-nosnippet>35</a>        <span class="kw">pub fn </span>getBundleIdentifier(appName: <span class="kw-2">*const </span>NSString) -&gt; <span class="kw-2">*const </span>NSString;
+<a href=#36 id=36 data-nosnippet>36</a>    }
+<a href=#37 id=37 data-nosnippet>37</a>}
+<a href=#38 id=38 data-nosnippet>38</a>
+<a href=#39 id=39 data-nosnippet>39</a><span class="doccomment">/// Delivers a new notification
+<a href=#40 id=40 data-nosnippet>40</a>///
+<a href=#41 id=41 data-nosnippet>41</a>/// Returns a `NotificationError` if a notification could not be delivered
+<a href=#42 id=42 data-nosnippet>42</a>///
+<a href=#43 id=43 data-nosnippet>43</a>/// # Example:
+<a href=#44 id=44 data-nosnippet>44</a>///
+<a href=#45 id=45 data-nosnippet>45</a>/// ```no_run
+<a href=#46 id=46 data-nosnippet>46</a>/// # use mac_notification_sys::*;
+<a href=#47 id=47 data-nosnippet>47</a>/// // deliver a silent notification
+<a href=#48 id=48 data-nosnippet>48</a>/// let _ = send_notification("Title", None, "This is the body", None).unwrap();
+<a href=#49 id=49 data-nosnippet>49</a>/// ```
+<a href=#50 id=50 data-nosnippet>50</a></span><span class="comment">// #[deprecated(note="use `Notification::send`")]
+<a href=#51 id=51 data-nosnippet>51</a></span><span class="kw">pub fn </span>send_notification(
+<a href=#52 id=52 data-nosnippet>52</a>    title: <span class="kw-2">&amp;</span>str,
+<a href=#53 id=53 data-nosnippet>53</a>    subtitle: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;,
+<a href=#54 id=54 data-nosnippet>54</a>    message: <span class="kw-2">&amp;</span>str,
+<a href=#55 id=55 data-nosnippet>55</a>    options: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Notification&gt;,
+<a href=#56 id=56 data-nosnippet>56</a>) -&gt; NotificationResult&lt;NotificationResponse&gt; {
+<a href=#57 id=57 data-nosnippet>57</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(options) = <span class="kw-2">&amp;</span>options {
+<a href=#58 id=58 data-nosnippet>58</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(delivery_date) = options.delivery_date {
+<a href=#59 id=59 data-nosnippet>59</a>            <span class="macro">ensure!</span>(
+<a href=#60 id=60 data-nosnippet>60</a>                delivery_date &gt;= time::OffsetDateTime::now_utc().unix_timestamp() <span class="kw">as </span>f64,
+<a href=#61 id=61 data-nosnippet>61</a>                NotificationError::ScheduleInThePast
+<a href=#62 id=62 data-nosnippet>62</a>            );
+<a href=#63 id=63 data-nosnippet>63</a>        }
+<a href=#64 id=64 data-nosnippet>64</a>    };
+<a href=#65 id=65 data-nosnippet>65</a>
+<a href=#66 id=66 data-nosnippet>66</a>    <span class="kw">let </span>options = options.unwrap_or(<span class="kw-2">&amp;</span>Notification::new()).to_dictionary();
+<a href=#67 id=67 data-nosnippet>67</a>
+<a href=#68 id=68 data-nosnippet>68</a>    ensure_application_set()<span class="question-mark">?</span>;
+<a href=#69 id=69 data-nosnippet>69</a>
+<a href=#70 id=70 data-nosnippet>70</a>    <span class="kw">let </span>dictionary_response = <span class="kw">unsafe </span>{
+<a href=#71 id=71 data-nosnippet>71</a>        sys::sendNotification(
+<a href=#72 id=72 data-nosnippet>72</a>            NSString::from_str(title).deref(),
+<a href=#73 id=73 data-nosnippet>73</a>            NSString::from_str(subtitle.unwrap_or(<span class="string">""</span>)).deref(),
+<a href=#74 id=74 data-nosnippet>74</a>            NSString::from_str(message).deref(),
+<a href=#75 id=75 data-nosnippet>75</a>            options.deref(),
+<a href=#76 id=76 data-nosnippet>76</a>        )
+<a href=#77 id=77 data-nosnippet>77</a>    };
+<a href=#78 id=78 data-nosnippet>78</a>    <span class="macro">ensure!</span>(
+<a href=#79 id=79 data-nosnippet>79</a>        dictionary_response
+<a href=#80 id=80 data-nosnippet>80</a>            .objectForKey(NSString::from_str(<span class="string">"error"</span>).deref())
+<a href=#81 id=81 data-nosnippet>81</a>            .is_none(),
+<a href=#82 id=82 data-nosnippet>82</a>        NotificationError::UnableToDeliver
+<a href=#83 id=83 data-nosnippet>83</a>    );
+<a href=#84 id=84 data-nosnippet>84</a>
+<a href=#85 id=85 data-nosnippet>85</a>    <span class="kw">let </span>response = NotificationResponse::from_dictionary(dictionary_response);
+<a href=#86 id=86 data-nosnippet>86</a>
+<a href=#87 id=87 data-nosnippet>87</a>    <span class="prelude-val">Ok</span>(response)
+<a href=#88 id=88 data-nosnippet>88</a>}
+<a href=#89 id=89 data-nosnippet>89</a>
+<a href=#90 id=90 data-nosnippet>90</a><span class="doccomment">/// Search for a possible BundleIdentifier of a given appname.
+<a href=#91 id=91 data-nosnippet>91</a>/// Defaults to "com.apple.Finder" if no BundleIdentifier is found.
+<a href=#92 id=92 data-nosnippet>92</a></span><span class="kw">pub fn </span>get_bundle_identifier_or_default(app_name: <span class="kw-2">&amp;</span>str) -&gt; String {
+<a href=#93 id=93 data-nosnippet>93</a>    get_bundle_identifier(app_name).unwrap_or_else(|| <span class="string">"com.apple.Finder"</span>.to_string())
+<a href=#94 id=94 data-nosnippet>94</a>}
+<a href=#95 id=95 data-nosnippet>95</a>
+<a href=#96 id=96 data-nosnippet>96</a><span class="doccomment">/// Search for a BundleIdentifier of an given appname.
+<a href=#97 id=97 data-nosnippet>97</a></span><span class="kw">pub fn </span>get_bundle_identifier(app_name: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;String&gt; {
+<a href=#98 id=98 data-nosnippet>98</a>    <span class="kw">unsafe </span>{
+<a href=#99 id=99 data-nosnippet>99</a>        sys::getBundleIdentifier(NSString::from_str(app_name).deref()) <span class="comment">// *const NSString
+<a href=#100 id=100 data-nosnippet>100</a>            </span>.as_ref()
+<a href=#101 id=101 data-nosnippet>101</a>    }
+<a href=#102 id=102 data-nosnippet>102</a>    .map(NSString::to_string)
+<a href=#103 id=103 data-nosnippet>103</a>}
+<a href=#104 id=104 data-nosnippet>104</a>
+<a href=#105 id=105 data-nosnippet>105</a><span class="doccomment">/// Sets the application if not already set
+<a href=#106 id=106 data-nosnippet>106</a></span><span class="kw">fn </span>ensure_application_set() -&gt; NotificationResult&lt;()&gt; {
+<a href=#107 id=107 data-nosnippet>107</a>    <span class="kw">if </span>INIT_APPLICATION_SET.is_completed() {
+<a href=#108 id=108 data-nosnippet>108</a>        <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+<a href=#109 id=109 data-nosnippet>109</a>    };
+<a href=#110 id=110 data-nosnippet>110</a>    <span class="kw">let </span>bundle = get_bundle_identifier_or_default(<span class="string">"use_default"</span>);
+<a href=#111 id=111 data-nosnippet>111</a>    set_application(<span class="kw-2">&amp;</span>bundle)
+<a href=#112 id=112 data-nosnippet>112</a>}
+<a href=#113 id=113 data-nosnippet>113</a>
+<a href=#114 id=114 data-nosnippet>114</a><span class="doccomment">/// Set the application which delivers or schedules a notification
+<a href=#115 id=115 data-nosnippet>115</a></span><span class="kw">pub fn </span>set_application(bundle_ident: <span class="kw-2">&amp;</span>str) -&gt; NotificationResult&lt;()&gt; {
+<a href=#116 id=116 data-nosnippet>116</a>    <span class="kw">let </span><span class="kw-2">mut </span>result = <span class="prelude-val">Err</span>(ApplicationError::AlreadySet(bundle_ident.into()).into());
+<a href=#117 id=117 data-nosnippet>117</a>    INIT_APPLICATION_SET.call_once(|| {
+<a href=#118 id=118 data-nosnippet>118</a>        <span class="kw">let </span>was_set = <span class="kw">unsafe </span>{ sys::setApplication(NSString::from_str(bundle_ident).deref()) };
+<a href=#119 id=119 data-nosnippet>119</a>        result = <span class="kw">if </span>was_set {
+<a href=#120 id=120 data-nosnippet>120</a>            <span class="prelude-val">Ok</span>(())
+<a href=#121 id=121 data-nosnippet>121</a>        } <span class="kw">else </span>{
+<a href=#122 id=122 data-nosnippet>122</a>            <span class="prelude-val">Err</span>(ApplicationError::CouldNotSet(bundle_ident.into()).into())
+<a href=#123 id=123 data-nosnippet>123</a>        };
+<a href=#124 id=124 data-nosnippet>124</a>    });
+<a href=#125 id=125 data-nosnippet>125</a>    result
+<a href=#126 id=126 data-nosnippet>126</a>}</code></pre></div></section></main></body></html>

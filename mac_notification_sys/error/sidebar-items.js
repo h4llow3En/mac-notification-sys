@@ -1,1 +1,1 @@
-initSidebarItems({"enum":[["ApplicationError","Errors that can occur setting the Bundle Identifier."],["NotificationError","Errors that can occur while interacting with the NSUserNotificationCenter."]],"type":[["NotificationResult","Custom Result type for mac-notification-sys."]]});
+window.SIDEBAR_ITEMS = {"enum":["ApplicationError","Error","NotificationError"],"type":["NotificationResult"]};
