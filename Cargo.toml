@@ -19,10 +19,9 @@ include = ["Cargo.toml", "build.rs", "objc/*", "src/*.rs", "tests/*.rs"]
 build = "build.rs"
 
 [dependencies]
-objc-foundation = "0.1.1"
-objc_id = "0.1.1"
+objc2-foundation = "0.3"
+objc2 = "0.6"
 time = "0.3"
-dirs-next = "2.0.0"
 
 [build-dependencies]
 cc = "1.0.17"

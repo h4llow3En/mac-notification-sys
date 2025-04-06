@@ -1,10 +1,9 @@
 //! Custom structs and enums for mac-notification-sys.
 
-use objc_foundation::{INSDictionary, INSString, NSDictionary, NSString};
-use objc_id::Id;
+use objc2_foundation::{NSDictionary, NSString};
 use std::default::Default;
 use std::ops::Deref;
-
+use objc2::rc::Retained;
 use crate::error::{NotificationError, NotificationResult};
 use crate::{ensure, ensure_application_set, sys};
 
@@ -232,7 +231,7 @@ impl<'a> Notification<'a> {
     }
 
     /// Convert the Notification to an Objective C NSDictionary
-    pub(crate) fn to_dictionary(&self) -> Id<NSDictionary<NSString, NSString>> {
+    pub(crate) fn to_dictionary(&self) -> Retained<NSDictionary<NSString, NSString>> {
         // TODO: If possible, find a way to simplify this so I don't have to manually convert struct to NSDictionary
         let keys = &[
             &*NSString::from_str("mainButtonLabel"),
@@ -283,7 +282,7 @@ impl<'a> Notification<'a> {
             }),
             NSString::from_str(sound),
         ];
-        NSDictionary::from_keys_and_objects(keys, vals)
+        NSDictionary::from_retained_objects(keys, &vals)
     }
 
     /// Delivers a new notification
@@ -312,8 +311,7 @@ impl<'a> Notification<'a> {
         };
         ensure!(
             dictionary_response
-                .deref()
-                .object_for(NSString::from_str("error").deref())
+                .objectForKey(NSString::from_str("error").deref())
                 .is_none(),
             NotificationError::UnableToDeliver
         );
@@ -341,29 +339,27 @@ pub enum NotificationResponse {
 
 impl NotificationResponse {
     /// Create a NotificationResponse from the given Objective C NSDictionary
-    pub(crate) fn from_dictionary(dictionary: Id<NSDictionary<NSString, NSString>>) -> Self {
-        let dictionary = dictionary.deref();
-
+    pub(crate) fn from_dictionary(dictionary: Retained<NSDictionary<NSString, NSString>>) -> Self {
         let activation_type = dictionary
-            .object_for(NSString::from_str("activationType").deref())
-            .map(|str| str.as_str().to_owned());
+            .objectForKey(NSString::from_str("activationType").deref())
+            .map(|str| str.to_string());
 
         match activation_type.as_deref() {
             Some("actionClicked") => NotificationResponse::ActionButton(
-                match dictionary.object_for(NSString::from_str("activationValue").deref()) {
-                    Some(str) => str.as_str().to_owned(),
+                match dictionary.objectForKey(NSString::from_str("activationValue").deref()) {
+                    Some(str) => str.to_string(),
                     None => String::from(""),
                 },
             ),
             Some("closeClicked") => NotificationResponse::CloseButton(
-                match dictionary.object_for(NSString::from_str("activationValue").deref()) {
-                    Some(str) => str.as_str().to_owned(),
+                match dictionary.objectForKey(NSString::from_str("activationValue").deref()) {
+                    Some(str) => str.to_string(),
                     None => String::from(""),
                 },
             ),
             Some("replied") => NotificationResponse::Reply(
-                match dictionary.object_for(NSString::from_str("activationValue").deref()) {
-                    Some(str) => str.as_str().to_owned(),
+                match dictionary.objectForKey(NSString::from_str("activationValue").deref()) {
+                    Some(str) => str.to_string(),
                     None => String::from(""),
                 },
             ),
