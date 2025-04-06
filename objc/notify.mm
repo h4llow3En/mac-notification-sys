@@ -1,7 +1,7 @@
 #import "notify.h"
 
 // getBundleIdentifier(app_name: &str) -> "com.apple.Terminal"
-NSString* getBundleIdentifier(NSString* appName) {
+extern "C" NSString* getBundleIdentifier(NSString* appName) {
     NSString* findString = [NSString stringWithFormat:@"get id of application \"%@\"", appName];
     NSAppleScript* findScript = [[NSAppleScript alloc] initWithSource:findString];
     NSAppleEventDescriptor* resultDescriptor = [findScript executeAndReturnError:nil];
@@ -10,7 +10,7 @@ NSString* getBundleIdentifier(NSString* appName) {
 
 // setApplication(new_bundle_identifier: &str) -> Result<()>
 // invariant: this function should be called at most once and before `sendNotification`
-BOOL setApplication(NSString* newbundleIdentifier) {
+extern "C" BOOL setApplication(NSString* newbundleIdentifier) {
     @autoreleasepool {
         if (!installNSBundleHook()) {
             return NO;
@@ -27,7 +27,7 @@ BOOL setApplication(NSString* newbundleIdentifier) {
 }
 
 // sendNotification(title: &str, subtitle: &str, message: &str, options: Notification) -> NotificationResult<()>
-NSDictionary* sendNotification(NSString* title, NSString* subtitle, NSString* message, NSDictionary* options) {
+extern "C" NSDictionary* sendNotification(NSString* title, NSString* subtitle, NSString* message, NSDictionary* options) {
     @autoreleasepool {
         // For a list of available notification options, see https://developer.apple.com/documentation/foundation/nsusernotification?language=objc
 

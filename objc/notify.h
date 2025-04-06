@@ -16,10 +16,10 @@ NSString* fakeBundleIdentifier = nil;
 @end
 
 BOOL installNSBundleHook() {
-    Class class = objc_getClass("NSBundle");
-    if (class) {
-        method_exchangeImplementations(class_getInstanceMethod(class, @selector(bundleIdentifier)),
-                                       class_getInstanceMethod(class, @selector(__bundleIdentifier)));
+    Class clazz = objc_getClass("NSBundle");
+    if (clazz) {
+        method_exchangeImplementations(class_getInstanceMethod(clazz, @selector(bundleIdentifier)),
+                                       class_getInstanceMethod(clazz, @selector(__bundleIdentifier)));
         return YES;
     }
     return NO;
