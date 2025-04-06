@@ -10,7 +10,7 @@ homepage = "https://github.com/h4llow3En/mac-notification-sys"
 repository = "https://github.com/h4llow3En/mac-notification-sys"
 documentation = "https://h4llow3en.github.io/mac-notification-sys/mac_notification_sys/"
 
-license = "MIT"
+license = "MIT/Apache-2.0"
 keywords = ["notification", "masOS", "osx", "notify"]
 readme = "README.md"
 
