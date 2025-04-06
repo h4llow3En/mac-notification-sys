@@ -136,6 +136,12 @@ NSDictionary* sendNotification(NSString* title, NSString* subtitle, NSString* me
             [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.1]];
         }
 
-        return ncDelegate.actionData;
+        // XXX: prevents crash described in https://github.com/h4llow3En/mac-notification-sys/issues/64
+        // TODO: the underlying issue is not yet understood
+        if (ncDelegate.actionData != NULL) {
+            return ncDelegate.actionData;
+        } else {
+            return [[NSDictionary alloc] init];
+        }
     }
 }
