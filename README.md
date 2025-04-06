@@ -65,11 +65,11 @@ fn main() {
 ## Contributors
 
  Thanks goes to these wonderful people:
- - [@hoodie](https://github.com/hoodie)
- - [@PandawanFr](https://github.com/PandawanFr)
- - [Didrik Nordström](https://github.com/betamos)
+ <a href="https://github.com/h4llow3En/mac-notification-sys/graphs/contributors">
+   <img src="https://contrib.rocks/image?repo=h4llow3En/mac-notification-sys" />
+ </a>
 
-Any help in form of descriptive and friendly [issues](https://github.com/h4llow3En/mac-notification-sys/issues) or comprehensive pull requests are welcome! 
+Any help in form of descriptive and friendly [issues](https://github.com/h4llow3En/mac-notification-sys/issues) or comprehensive pull requests are welcome!
 
 
 Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in mac-notification-sys by you, as defined in the Apache-2.0 license, shall be dual licensed as above, without any additional terms or conditions.
