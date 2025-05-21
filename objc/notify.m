@@ -104,6 +104,12 @@ NSDictionary* sendNotification(NSString* title, NSString* subtitle, NSString* me
             userNotification.responsePlaceholder = options[@"mainButtonLabel"];
         }
 
+        // Click
+        if (options[@"click"] && ![options[@"click"] isEqualToString:@"yes"]) {
+            ncDelegate.keepRunning = YES;
+            ncDelegate.click = YES;
+        }
+
         // Change the icon of the app in the notification
         if (options[@"appIcon"] && ![options[@"appIcon"] isEqualToString:@""]) {
             NSImage* icon = getImageFromURL(options[@"appIcon"]);
