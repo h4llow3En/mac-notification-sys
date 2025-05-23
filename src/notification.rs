@@ -72,6 +72,7 @@ pub struct Notification<'a> {
     pub(crate) delivery_date: Option<f64>,
     pub(crate) sound: Option<Sound>,
     pub(crate) asynchronous: Option<bool>,
+    pub(crate) click: Option<bool>,
 }
 
 impl<'a> Notification<'a> {
@@ -230,6 +231,19 @@ impl<'a> Notification<'a> {
         self
     }
 
+    /// Allow waiting a response for notification click.
+    ///
+    /// # Example:
+    ///
+    /// ```no_run
+    /// # use mac_notification_sys::*;
+    /// let _ = Notification::new().click(true);
+    /// ```
+    pub fn click(&mut self, click: bool) -> &mut Self {
+        self.click = Some(click);
+        self
+    }
+
     /// Convert the Notification to an Objective C NSDictionary
     pub(crate) fn to_dictionary(&self) -> Retained<NSDictionary<NSString, NSString>> {
         // TODO: If possible, find a way to simplify this so I don't have to manually convert struct to NSDictionary
@@ -243,6 +257,7 @@ impl<'a> Notification<'a> {
             &*NSString::from_str("deliveryDate"),
             &*NSString::from_str("asynchronous"),
             &*NSString::from_str("sound"),
+            &*NSString::from_str("click"),
         ];
         let (main_button_label, actions, is_response): (&str, &[&str], bool) =
             match &self.main_button {
@@ -277,6 +292,11 @@ impl<'a> Notification<'a> {
             }),
             // TODO: Same as above, if NSDictionary could support multiple types, this could be a boolean
             NSString::from_str(match self.asynchronous {
+                Some(true) => "yes",
+                _ => "no",
+            }),
+            // TODO: Same as above, if NSDictionary could support multiple types, this could be a boolean
+            NSString::from_str(match self.click {
                 Some(true) => "yes",
                 _ => "no",
             }),
