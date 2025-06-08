@@ -5,7 +5,7 @@ fn main() {
         "clickable notification",
         None,
         "click me",
-        Some(Notification::new().click(true)),
+        Some(Notification::new().wait_for_click(true)),
     )
     .unwrap();
 

@@ -104,10 +104,10 @@ NSDictionary* sendNotification(NSString* title, NSString* subtitle, NSString* me
             userNotification.responsePlaceholder = options[@"mainButtonLabel"];
         }
 
-        // Click
+        // Wait for click
         if (options[@"click"] && ![options[@"click"] isEqualToString:@"yes"]) {
             ncDelegate.keepRunning = YES;
-            ncDelegate.click = YES;
+            ncDelegate.waitForClick = YES;
         }
 
         // Change the icon of the app in the notification

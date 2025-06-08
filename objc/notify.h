@@ -31,7 +31,7 @@ BOOL installNSBundleHook(void) {
 
 @interface NotificationCenterDelegate: NSObject <NSUserNotificationCenterDelegate>
 @property(nonatomic, assign) BOOL keepRunning;
-@property(nonatomic, assign) BOOL click;
+@property(nonatomic, assign) BOOL waitForClick;
 @property(nonatomic, retain) NSDictionary* actionData;
 @end
 
@@ -41,7 +41,7 @@ BOOL installNSBundleHook(void) {
 - (void)userNotificationCenter:(NSUserNotificationCenter*)center
         didDeliverNotification:(NSUserNotification*)notification {
     // Stop running if we're not expecting a response
-    if (!notification.hasActionButton && !notification.hasReplyButton && !self.click) {
+    if (!notification.hasActionButton && !notification.hasReplyButton && !self.waitForClick) {
         self.keepRunning = NO;
     }
 }
