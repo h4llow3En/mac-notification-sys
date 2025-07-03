@@ -1,5 +1,11 @@
 # Changelog
 
+### [v0.6.5](///compare/v0.6.4...v0.6.5) (2025-07-03)
+
+#### Features
+
+* add support for waiting on notification click (b9a2703)
+
 ### [v0.6.4](///compare/v0.6.3...v0.6.4) (2025-04-06)
 
 #### Features
