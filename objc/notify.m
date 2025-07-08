@@ -105,7 +105,7 @@ NSDictionary* sendNotification(NSString* title, NSString* subtitle, NSString* me
         }
 
         // Wait for click
-        if (options[@"click"] && ![options[@"click"] isEqualToString:@"yes"]) {
+        if (options[@"click"] && [options[@"click"] isEqualToString:@"yes"]) {
             ncDelegate.keepRunning = YES;
             ncDelegate.waitForClick = YES;
         }

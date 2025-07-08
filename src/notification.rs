@@ -72,7 +72,7 @@ pub struct Notification<'a> {
     pub(crate) delivery_date: Option<f64>,
     pub(crate) sound: Option<Sound>,
     pub(crate) asynchronous: Option<bool>,
-    pub(crate) wait_for_click: Option<bool>,
+    pub(crate) wait_for_click: bool,
 }
 
 impl<'a> Notification<'a> {
@@ -240,7 +240,7 @@ impl<'a> Notification<'a> {
     /// let _ = Notification::new().wait_for_click(true);
     /// ```
     pub fn wait_for_click(&mut self, click: bool) -> &mut Self {
-        self.wait_for_click = Some(click);
+        self.wait_for_click = click;
         self
     }
 
@@ -296,11 +296,8 @@ impl<'a> Notification<'a> {
                 _ => "no",
             }),
             // TODO: Same as above, if NSDictionary could support multiple types, this could be a boolean
-            NSString::from_str(match self.wait_for_click {
-                Some(true) => "yes",
-                _ => "no",
-            }),
             NSString::from_str(sound),
+            NSString::from_str(if self.wait_for_click { "yes" } else { "no" }),
         ];
         NSDictionary::from_retained_objects(keys, &vals)
     }
