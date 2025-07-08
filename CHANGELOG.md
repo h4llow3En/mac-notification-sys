@@ -1,5 +1,11 @@
 # Changelog
 
+### [v0.6.6](///compare/v0.6.5...v0.6.6) (2025-07-09)
+
+#### Fixes
+
+* correct wait for click behavior (d933ff6)
+
 ### [v0.6.5](///compare/v0.6.4...v0.6.5) (2025-07-03)
 
 #### Features
