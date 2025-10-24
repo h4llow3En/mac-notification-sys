@@ -71,6 +71,8 @@ fn main() {
 
 Any help in form of descriptive and friendly [issues](https://github.com/h4llow3En/mac-notification-sys/issues) or comprehensive pull requests are welcome!
 
+## license
+Licensed under either of Apache License, Version 2.0 or MIT license at your option.
 
 Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in mac-notification-sys by you, as defined in the Apache-2.0 license, shall be dual licensed as above, without any additional terms or conditions.
 
