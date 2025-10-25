@@ -1,5 +1,11 @@
 # Changelog
 
+### [v0.6.8](///compare/v0.6.7...v0.6.8) (2025-10-25)
+
+#### Fixes
+
+* build without `-fmodules` flag (1044a45)
+
 ### [v0.6.7](///compare/v0.6.6...v0.6.7) (2025-10-25)
 
 #### Fixes
