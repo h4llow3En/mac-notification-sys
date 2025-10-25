@@ -14,7 +14,7 @@ fn main() {
 
         cc::Build::new()
             .file("objc/notify.m")
-            .flag("-fmodules")
+            // .flag("-fmodules")
             .flag("-Wno-deprecated-declarations")
             // `cc` doesn't try to pick up on this automatically, but `clang` needs it to
             // generate a "correct" Objective-C symbol table which better matches XCode.
