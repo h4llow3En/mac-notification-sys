@@ -1,5 +1,11 @@
 # Changelog
 
+### [v0.6.7](///compare/v0.6.6...v0.6.7) (2025-10-25)
+
+#### Fixes
+
+* amend licensing (dc77812)
+
 ### [v0.6.6](///compare/v0.6.5...v0.6.6) (2025-07-09)
 
 #### Fixes
