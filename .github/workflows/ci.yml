@@ -3,62 +3,65 @@ on:
     branches:
       - main
       - master
-    pull_request:
+  pull_request:
 
 name: Continuous Integration
 
 jobs:
   macos:
-    name: macos
-    runs-on: macos-latest
+    name: Rust (macOS ${{ matrix.macos }}, Rust ${{ matrix.rust }})
+    runs-on: ${{ matrix.macos }}
     strategy:
+      fail-fast: false
       matrix:
         rust:
           - stable
           - beta
           - stable minus 6 releases
+        macos: [macos-latest, macos-13] # macos-latest = Apple Silicon, macos-13 = Intel
     steps:
       - uses: actions/checkout@v4
-      - uses: Swatinem/rust-cache@v2
-      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry and target
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@v1
         with:
           toolchain: ${{ matrix.rust }}
           components: clippy, rustfmt
 
-      - name: check (default features)
+      - name: cargo check
         run: cargo check
 
-      - name: test (default features)
+      - name: cargo test (no run)
         run: cargo test --no-run
 
-      - name: clippy (default features)
-        run: cargo clippy -- -D warnings
+      - name: cargo test (all features)
+        run: cargo test --all-features
 
-  clang-format:
-    name: test clang-format
-    runs-on: ubuntu-latest
+      - name: cargo clippy
+        run: cargo clippy --all-features -- -D warnings
 
-    steps:
-    - uses: actions/checkout@v2
-    - uses: DoozyX/clang-format-lint-action@v0.8
-      with:
-        source: './objc'
-        exclude: './third_party ./external'
-        extensions: 'h,m'
-        clangFormatVersion: 10
-        style: file # read style from .clang-format
+      - name: cargo fmt (check)
+        run: cargo fmt --all -- --check
 
-  rustfmt:
-    name: test rustfmt
+  format:
+    name: Clang Format (Objective-C)
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout sources
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
-      - name: Install nightly toolchain with rustfmt available
-        uses: actions-rs/toolchain@v1
+      - name: Cache clang-format
+        uses: actions/cache@v4
         with:
-          profile: minimal
-          toolchain: nightly
-          override: true
-          components: rustfmt
+          path: ~/.cache/clang-format
+          key: clang-format-${{ runner.os }}
+
+      - uses: DoozyX/clang-format-lint-action@v0.8
+        with:
+          source: "./objc"
+          exclude: "./third_party ./external"
+          extensions: "h,m"
+          clangFormatVersion: 10
+          style: file # read style from .clang-format

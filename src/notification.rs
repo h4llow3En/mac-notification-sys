@@ -1,11 +1,11 @@
 //! Custom structs and enums for mac-notification-sys.
 
+use crate::error::{NotificationError, NotificationResult};
+use crate::{ensure, ensure_application_set, sys};
+use objc2::rc::Retained;
 use objc2_foundation::{NSDictionary, NSString};
 use std::default::Default;
 use std::ops::Deref;
-use objc2::rc::Retained;
-use crate::error::{NotificationError, NotificationResult};
-use crate::{ensure, ensure_application_set, sys};
 
 /// Possible actions accessible through the main button of the notification
 #[derive(Clone, Debug)]
