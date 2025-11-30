@@ -24,4 +24,4 @@ objc2 = "0.6"
 time = "0.3"
 
 [build-dependencies]
-cc = "1.0.17"
+cc = "1.2"

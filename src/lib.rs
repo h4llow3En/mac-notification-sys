@@ -1,4 +1,10 @@
 //! A very thin wrapper around NSNotifications
+#![deny(deref_nullptr)]
+#![deny(invalid_value)]
+#![deny(invalid_from_utf8)]
+#![deny(never_type_fallback_flowing_into_unsafe)]
+#![deny(ptr_to_integer_transmute_in_consts)]
+#![deny(static_mut_refs)]
 #![warn(
     missing_docs,
     trivial_casts,
