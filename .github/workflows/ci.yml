@@ -18,7 +18,7 @@ jobs:
           - stable
           - beta
           - stable minus 6 releases
-        macos: [macos-latest, macos-13] # macos-latest = Apple Silicon, macos-13 = Intel
+        macos: [macos-latest, macos-15-intel] # macos-latest = Apple Silicon, macos-13 = Intel
     steps:
       - uses: actions/checkout@v4
 
@@ -65,3 +65,17 @@ jobs:
           extensions: "h,m"
           clangFormatVersion: 10
           style: file # read style from .clang-format
+
+  check-minimal-versions:
+    name: cargo-check-minimal-versions
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+      - uses: dtolnay/rust-toolchain@nightly
+      - name: Update dependencies to minimal versions
+        run: cargo update -Z minimal-versions
+      - name: cargo check (minimal versions)
+        run: cargo check
+      - name: cargo check --all-features (minimal versions)
+        run: cargo check --all-features
