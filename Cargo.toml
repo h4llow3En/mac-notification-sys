@@ -18,6 +18,9 @@ include = ["Cargo.toml", "build.rs", "objc/*", "src/*.rs", "tests/*.rs"]
 
 build = "build.rs"
 
+[package.metadata.docs.rs]
+targets = ["aarch64-apple-darwin"]
+
 [dependencies]
 objc2-foundation = "0.3"
 objc2 = "0.6"
