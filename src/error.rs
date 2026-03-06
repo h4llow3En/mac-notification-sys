@@ -22,12 +22,11 @@ mod application {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
             match self {
                 ApplicationError::AlreadySet(e) => {
-                    write!(f, "Application '{}' can only be set once.", e)
+                    write!(f, "Application '{e}' can only be set once.")
                 }
                 ApplicationError::CouldNotSet(e) => write!(
                     f,
-                    "Could not set application '{}', using default \"com.apple.Terminal\"",
-                    e
+                    "Could not set application '{e}', using default \"com.apple.Terminal\"",
                 ),
             }
         }
@@ -81,8 +80,8 @@ pub enum Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Error::Application(e) => write!(f, "{}", e),
-            Error::Notification(e) => write!(f, "{}", e),
+            Error::Application(e) => write!(f, "{e}"),
+            Error::Notification(e) => write!(f, "{e}"),
         }
     }
 }
@@ -105,10 +104,10 @@ impl From<NotificationError> for Error {
 #[macro_export]
 #[doc(hidden)]
 macro_rules! bail {
-    ($e:expr) => {
+    ($e:expr_2021) => {
         return Err($e.into());
     };
-    ($fmt:expr, $($arg:tt)+) => {
+    ($fmt:expr_2021, $($arg:tt)+) => {
         return Err(format!($fmt, $($arg)+).into());
     };
 }
@@ -121,12 +120,12 @@ macro_rules! bail {
 #[macro_export(local_inner_macros)]
 #[doc(hidden)]
 macro_rules! ensure {
-    ($cond:expr, $e:expr) => {
+    ($cond:expr_2021, $e:expr_2021) => {
         if ($cond) != true {
             bail!($e);
         }
     };
-    ($cond:expr, $fmt:expr, $($arg:tt)*) => {
+    ($cond:expr_2021, $fmt:expr_2021, $($arg:tt)*) => {
         if !($cond) {
             bail!($fmt, $($arg)*);
         }

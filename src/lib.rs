@@ -30,7 +30,7 @@ mod sys {
     use objc2::rc::Retained;
     use objc2_foundation::{NSDictionary, NSString};
     #[link(name = "notify")]
-    extern "C" {
+    unsafe extern "C" {
         pub fn sendNotification(
             title: *const NSString,
             subtitle: *const NSString,
