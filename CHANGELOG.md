@@ -1,5 +1,12 @@
 # Changelog
 
+### [v0.6.11](https://github.com/h4llow3En/mac-notification-sys/compare/v0.6.10...v0.6.11) (2026-03-08)
+
+#### Fixes
+
+* skip linking when building docs
+([5e72f48](https://github.com/h4llow3En/mac-notification-sys/commit/5e72f48e4ae9a85671ec01d38eae611ea7efc7e0))
+
 ### [v0.6.10](https://github.com/h4llow3En/mac-notification-sys/compare/v0.6.9...v0.6.10) (2026-03-06)
 
 #### Features
