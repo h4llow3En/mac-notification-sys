@@ -1,6 +1,6 @@
 [package]
 name = "mac-notification-sys"
-version = "0.6.10"
+version = "0.6.11"
 authors = ["Felix Döring <development@felixdoering.com>", "Hendrik Sollich <hendrik@hoodie.de>"]
 description = "Thin wrapper around macOS Notifications."
 edition = "2024"
