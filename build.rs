@@ -3,6 +3,11 @@ use std::env::var;
 const DEPLOYMENT_TARGET_VAR: &str = "MACOSX_DEPLOYMENT_TARGET";
 
 fn main() {
+    // docs.rs builds on Linux and cannot cross-compile Objective-C; skip native compilation.
+    if std::env::var("DOCS_RS").is_ok() {
+        return;
+    }
+
     if var("CARGO_CFG_TARGET_OS").as_deref() == Ok("macos") {
         let min_version = var(DEPLOYMENT_TARGET_VAR).unwrap_or_else(|_| {
             String::from(match var("CARGO_CFG_TARGET_ARCH").unwrap().as_str() {
