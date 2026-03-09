@@ -26,7 +26,7 @@ mac-notification-sys = "0.6"
 
 ## Documentation
 
-The documentation can be found [here](https://h4llow3en.github.io/mac-notification-sys/mac_notification_sys/)
+The documentation can be found [here](https://docs.rs/mac-notification-sys/latest/mac_notification_sys/)
 
 ## Example
 

@@ -8,7 +8,7 @@ rust-version = "1.85"
 
 homepage = "https://github.com/h4llow3En/mac-notification-sys"
 repository = "https://github.com/h4llow3En/mac-notification-sys"
-documentation = "https://h4llow3en.github.io/mac-notification-sys/mac_notification_sys/"
+documentation = "https://docs.rs/mac-notification-sys/latest/mac_notification_sys/"
 
 license = "MIT/Apache-2.0"
 keywords = ["notification", "masOS", "osx", "notify"]
@@ -24,7 +24,7 @@ targets = ["aarch64-apple-darwin"]
 [dependencies]
 objc2-foundation = "0.3"
 objc2 = "0.6"
-time = "=0.3.45"
+time = "0.3"
 
 [build-dependencies]
 cc = "1.2"
