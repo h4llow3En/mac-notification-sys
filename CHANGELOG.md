@@ -1,5 +1,12 @@
 # Changelog
 
+### [v0.6.12](https://github.com/h4llow3En/mac-notification-sys/compare/v0.6.11...v0.6.12) (2026-03-09)
+
+#### Fixes
+
+* remove pin on time crate
+([b2cbaac](https://github.com/h4llow3En/mac-notification-sys/commit/b2cbaac972954f4c955cf3d3eafd3ec2170c61d8))
+
 ### [v0.6.11](https://github.com/h4llow3En/mac-notification-sys/compare/v0.6.10...v0.6.11) (2026-03-08)
 
 #### Fixes
