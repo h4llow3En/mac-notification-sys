@@ -147,8 +147,6 @@ NSDictionary* sendNotification(NSString* title, NSString* subtitle, NSString* me
 
         // auto-dismiss never calls the delegate so we check deliveredNotifications manually
         BOOL (^wasAutoDismissed)(void) = ^BOOL {
-          if (!ncDelegate.waitForClose)
-              return NO;
           for (NSUserNotification* n in notificationCenter.deliveredNotifications) {
               if ([n.identifier isEqualToString:userNotification.identifier])
                   return NO;
