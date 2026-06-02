@@ -32,7 +32,10 @@ BOOL installNSBundleHook(void) {
 @interface NotificationCenterDelegate: NSObject <NSUserNotificationCenterDelegate>
 @property(nonatomic, assign) BOOL keepRunning;
 @property(nonatomic, assign) BOOL waitForClick;
+@property(nonatomic, assign) BOOL waitForClose;
 @property(nonatomic, retain) NSDictionary* actionData;
+// background threads wait on this instead of spinning the run loop (#86)
+@property(nonatomic, assign) dispatch_semaphore_t doneSemaphore;
 @end
 
 // Delegate to respond to events in the NSUserNotificationCenter
@@ -41,8 +44,9 @@ BOOL installNSBundleHook(void) {
 - (void)userNotificationCenter:(NSUserNotificationCenter*)center
         didDeliverNotification:(NSUserNotification*)notification {
     // Stop running if we're not expecting a response
-    if (!notification.hasActionButton && !notification.hasReplyButton && !self.waitForClick) {
+    if (!notification.hasActionButton && !notification.hasReplyButton && !self.waitForClick && !self.waitForClose) {
         self.keepRunning = NO;
+        dispatch_semaphore_signal(self.doneSemaphore);
     }
 }
 
@@ -94,6 +98,7 @@ BOOL installNSBundleHook(void) {
     self.keepRunning = NO;
 
     // Force-close the notification after interacting with it
+    dispatch_semaphore_signal(self.doneSemaphore);
     [center removeDeliveredNotification:notification];
 }
 
@@ -105,12 +110,14 @@ BOOL installNSBundleHook(void) {
     // Stop running after interacting with the notification
     self.keepRunning = NO;
 
+    dispatch_semaphore_signal(self.doneSemaphore);
+
     // Force-close the notification after interacting with it
     [center removeDeliveredNotification:notification];
 }
 @end
 
-// Utility function to create an NSImage from an url
+// handles both file:// and bare paths
 NSImage* getImageFromURL(NSString* url) {
     NSURL* imageURL = [NSURL URLWithString:url];
     if ([[imageURL scheme] length] == 0) {

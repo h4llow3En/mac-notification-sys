@@ -42,6 +42,9 @@ NSDictionary* sendNotification(NSString* title, NSString* subtitle, NSString* me
         NSUserNotification* userNotification = [[NSUserNotification alloc] init];
         BOOL isScheduled = NO;
 
+        // wasAutoDismissed() needs this to find the right notification later
+        userNotification.identifier = [[NSUUID UUID] UUIDString];
+
         // Basic text
         userNotification.title = title;
         if (![subtitle isEqualToString:@""]) {
@@ -93,6 +96,7 @@ NSDictionary* sendNotification(NSString* title, NSString* subtitle, NSString* me
         // Close/Other button (defaults to "Cancel")
         if (options[@"closeButtonLabel"] && ![options[@"closeButtonLabel"] isEqualToString:@""]) {
             ncDelegate.keepRunning = YES;
+            ncDelegate.waitForClose = YES;
             [userNotification setValue:@YES forKey:@"_showsButtons"];
             userNotification.otherButtonTitle = options[@"closeButtonLabel"];
         }
@@ -136,10 +140,44 @@ NSDictionary* sendNotification(NSString* title, NSString* subtitle, NSString* me
 
         [NSThread sleepForTimeInterval:0.1f];
 
-        // TODO: Issue #4 mentions an issue with multithreading, perhaps there could be an overall "synchronous" option (instead of deliveryDate's synchronous section)
-        // Loop/wait for a user action if needed
-        while (ncDelegate.keepRunning) {
-            [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.1]];
+        // callbacks always come in on the main thread
+        // if we ARE the main thread we have to keep the run loop going
+        // if we're on a background thread just semaphore-wait, the main run loop does the rest (#86)
+        ncDelegate.doneSemaphore = dispatch_semaphore_create(0);
+
+        // auto-dismiss never calls the delegate so we check deliveredNotifications manually
+        BOOL (^wasAutoDismissed)(void) = ^BOOL {
+          if (!ncDelegate.waitForClose)
+              return NO;
+          for (NSUserNotification* n in notificationCenter.deliveredNotifications) {
+              if ([n.identifier isEqualToString:userNotification.identifier])
+                  return NO;
+          }
+          return YES;
+        };
+
+        if ([NSThread isMainThread]) {
+            while (ncDelegate.keepRunning) {
+                [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.1]];
+                if (wasAutoDismissed())
+                    ncDelegate.keepRunning = NO;
+            }
+        } else {
+            if (ncDelegate.keepRunning) {
+                dispatch_semaphore_t sem = ncDelegate.doneSemaphore;
+                NSTimer* dismissPoll = [NSTimer timerWithTimeInterval:0.5
+                                                              repeats:YES
+                                                                block:^(NSTimer* t) {
+                                                                  if (wasAutoDismissed()) {
+                                                                      ncDelegate.keepRunning = NO;
+                                                                      dispatch_semaphore_signal(sem);
+                                                                      [t invalidate];
+                                                                  }
+                                                                }];
+                [[NSRunLoop mainRunLoop] addTimer:dismissPoll forMode:NSDefaultRunLoopMode];
+                dispatch_semaphore_wait(sem, DISPATCH_TIME_FOREVER);
+                [dismissPoll invalidate];
+            }
         }
 
         // XXX: prevents crash described in https://github.com/h4llow3En/mac-notification-sys/issues/64
