@@ -131,6 +131,9 @@ NSDictionary* sendNotification(NSString* title, NSString* subtitle, NSString* me
             ncDelegate.keepRunning = NO;
         }
 
+        // create before delivery so delegate callbacks never see a nil semaphore
+        ncDelegate.doneSemaphore = dispatch_semaphore_create(0);
+
         // Send or schedule notification
         if (isScheduled) {
             [notificationCenter scheduleNotification:userNotification];
@@ -139,11 +142,6 @@ NSDictionary* sendNotification(NSString* title, NSString* subtitle, NSString* me
         }
 
         [NSThread sleepForTimeInterval:0.1f];
-
-        // callbacks always come in on the main thread
-        // if we ARE the main thread we have to keep the run loop going
-        // if we're on a background thread just semaphore-wait, the main run loop does the rest (#86)
-        ncDelegate.doneSemaphore = dispatch_semaphore_create(0);
 
         // auto-dismiss never calls the delegate so we check deliveredNotifications manually
         BOOL (^wasAutoDismissed)(void) = ^BOOL {
@@ -155,12 +153,14 @@ NSDictionary* sendNotification(NSString* title, NSString* subtitle, NSString* me
         };
 
         if ([NSThread isMainThread]) {
+            // spin the run loop so callbacks are delivered on this thread
             while (ncDelegate.keepRunning) {
                 [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.1]];
                 if (wasAutoDismissed())
                     ncDelegate.keepRunning = NO;
             }
         } else {
+            // callbacks come in on the main thread; caller must keep its run loop spinning (#86)
             if (ncDelegate.keepRunning) {
                 dispatch_semaphore_t sem = ncDelegate.doneSemaphore;
                 NSTimer* dismissPoll = [NSTimer timerWithTimeInterval:0.5
@@ -173,8 +173,14 @@ NSDictionary* sendNotification(NSString* title, NSString* subtitle, NSString* me
                                                                   }
                                                                 }];
                 [[NSRunLoop mainRunLoop] addTimer:dismissPoll forMode:NSDefaultRunLoopMode];
+                // FOREVER is safe: the delegate or the poll above will always signal
+                // once the user interacts, and we actively want to wait indefinitely
+                // for persistent alerts that have no auto-dismiss.
                 dispatch_semaphore_wait(sem, DISPATCH_TIME_FOREVER);
-                [dismissPoll invalidate];
+                // invalidate must run on the thread that owns the timer's run loop
+                dispatch_async(dispatch_get_main_queue(), ^{
+                  [dismissPoll invalidate];
+                });
             }
         }
 
