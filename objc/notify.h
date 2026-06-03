@@ -35,7 +35,7 @@ BOOL installNSBundleHook(void) {
 @property(nonatomic, assign) BOOL waitForClose;
 @property(nonatomic, retain) NSDictionary* actionData;
 // background threads wait on this instead of spinning the run loop (#86)
-@property(nonatomic, assign) dispatch_semaphore_t doneSemaphore;
+@property(nonatomic, strong) dispatch_semaphore_t doneSemaphore;
 @end
 
 // Delegate to respond to events in the NSUserNotificationCenter
