@@ -1,6 +1,11 @@
 use mac_notification_sys::*;
 
 fn main() {
+    let bundle = get_bundle_identifier_or_default("safari");
+    println!("{}", bundle);
+
+    set_application(&bundle).unwrap();
+
     let response = send_notification(
         "main button with drop down",
         None,

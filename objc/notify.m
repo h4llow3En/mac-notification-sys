@@ -42,6 +42,9 @@ NSDictionary* sendNotification(NSString* title, NSString* subtitle, NSString* me
         NSUserNotification* userNotification = [[NSUserNotification alloc] init];
         BOOL isScheduled = NO;
 
+        // wasAutoDismissed() needs this to find the right notification later
+        userNotification.identifier = [[NSUUID UUID] UUIDString];
+
         // Basic text
         userNotification.title = title;
         if (![subtitle isEqualToString:@""]) {
@@ -93,6 +96,7 @@ NSDictionary* sendNotification(NSString* title, NSString* subtitle, NSString* me
         // Close/Other button (defaults to "Cancel")
         if (options[@"closeButtonLabel"] && ![options[@"closeButtonLabel"] isEqualToString:@""]) {
             ncDelegate.keepRunning = YES;
+            ncDelegate.waitForClose = YES;
             [userNotification setValue:@YES forKey:@"_showsButtons"];
             userNotification.otherButtonTitle = options[@"closeButtonLabel"];
         }
@@ -127,6 +131,9 @@ NSDictionary* sendNotification(NSString* title, NSString* subtitle, NSString* me
             ncDelegate.keepRunning = NO;
         }
 
+        // create before delivery so delegate callbacks never see a nil semaphore
+        ncDelegate.doneSemaphore = dispatch_semaphore_create(0);
+
         // Send or schedule notification
         if (isScheduled) {
             [notificationCenter scheduleNotification:userNotification];
@@ -136,10 +143,45 @@ NSDictionary* sendNotification(NSString* title, NSString* subtitle, NSString* me
 
         [NSThread sleepForTimeInterval:0.1f];
 
-        // TODO: Issue #4 mentions an issue with multithreading, perhaps there could be an overall "synchronous" option (instead of deliveryDate's synchronous section)
-        // Loop/wait for a user action if needed
-        while (ncDelegate.keepRunning) {
-            [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.1]];
+        // auto-dismiss never calls the delegate so we check deliveredNotifications manually
+        BOOL (^wasAutoDismissed)(void) = ^BOOL {
+          for (NSUserNotification* n in notificationCenter.deliveredNotifications) {
+              if ([n.identifier isEqualToString:userNotification.identifier])
+                  return NO;
+          }
+          return YES;
+        };
+
+        if ([NSThread isMainThread]) {
+            // spin the run loop so callbacks are delivered on this thread
+            while (ncDelegate.keepRunning) {
+                [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.1]];
+                if (wasAutoDismissed())
+                    ncDelegate.keepRunning = NO;
+            }
+        } else {
+            // callbacks come in on the main thread; caller must keep its run loop spinning (#86)
+            if (ncDelegate.keepRunning) {
+                dispatch_semaphore_t sem = ncDelegate.doneSemaphore;
+                NSTimer* dismissPoll = [NSTimer timerWithTimeInterval:0.5
+                                                              repeats:YES
+                                                                block:^(NSTimer* t) {
+                                                                  if (wasAutoDismissed()) {
+                                                                      ncDelegate.keepRunning = NO;
+                                                                      dispatch_semaphore_signal(sem);
+                                                                      [t invalidate];
+                                                                  }
+                                                                }];
+                [[NSRunLoop mainRunLoop] addTimer:dismissPoll forMode:NSDefaultRunLoopMode];
+                // FOREVER is safe: the delegate or the poll above will always signal
+                // once the user interacts, and we actively want to wait indefinitely
+                // for persistent alerts that have no auto-dismiss.
+                dispatch_semaphore_wait(sem, DISPATCH_TIME_FOREVER);
+                // invalidate must run on the thread that owns the timer's run loop
+                dispatch_async(dispatch_get_main_queue(), ^{
+                  [dismissPoll invalidate];
+                });
+            }
         }
 
         // XXX: prevents crash described in https://github.com/h4llow3En/mac-notification-sys/issues/64

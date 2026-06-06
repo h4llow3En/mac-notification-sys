@@ -9,7 +9,6 @@ AllowShortIfStatementsOnASingleLine: false
 BreakBeforeBinaryOperators: NonAssignment
 BreakBeforeBraces: Attach
 BreakBeforeTernaryOperators: true
-BreakBeforeTernaryOperators: true
 ColumnLimit: 0
 ConstructorInitializerAllOnOneLineOrOnePerLine: true
 DerivePointerAlignment: false
