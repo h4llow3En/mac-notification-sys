@@ -1,5 +1,15 @@
 # Changelog
 
+### [v0.6.13](https://github.com/h4llow3En/mac-notification-sys/compare/v0.6.12...v0.6.13) (2026-06-06)
+
+#### Fixes
+
+* wait_for_click blocking forever when the notification is dismissed
+([2cdceed](https://github.com/h4llow3En/mac-notification-sys/commit/2cdceede69e248114f7cdde99e5837f48ebf9fb6))
+* park background threads on a semaphore instead of spinning the run loop
+([3120f61](https://github.com/h4llow3En/mac-notification-sys/commit/3120f6120a28f3c51a171196f347290871eb72aa)),
+closes [#86](https://github.com/h4llow3En/mac-notification-sys/issues/86)
+
 ### [v0.6.12](https://github.com/h4llow3En/mac-notification-sys/compare/v0.6.11...v0.6.12) (2026-03-09)
 
 #### Fixes
