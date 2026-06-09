@@ -16,34 +16,51 @@ BOOL setApplication(NSString* newbundleIdentifier) {
             return NO;
         }
         if (LSCopyApplicationURLsForBundleIdentifier((CFStringRef)newbundleIdentifier, NULL) != NULL) {
-            [fakeBundleIdentifier release]; // Release old value - nil is ok
+            [fakeBundleIdentifier release];
             fakeBundleIdentifier = newbundleIdentifier;
-            [newbundleIdentifier retain]; // Retain new value - it outlives this scope
-
+            [newbundleIdentifier retain];
             return YES;
         }
         return NO;
     }
 }
 
-// sendNotification(title: &str, subtitle: &str, message: &str, options: Notification) -> NotificationResult<()>
-NSDictionary* sendNotification(NSString* title, NSString* subtitle, NSString* message, NSDictionary* options) {
+// handles both file:// and bare paths
+NSImage* getImageFromURL(NSString* url) {
+    NSURL* imageURL = [NSURL URLWithString:url];
+    if ([[imageURL scheme] length] == 0) {
+        imageURL = [NSURL fileURLWithPath:url];
+    }
+    return [[NSImage alloc] initWithContentsOfURL:imageURL];
+}
+
+// resolveAutoDismiss — called on the main thread when wasAutoDismissed() fires.
+// NSUserNotification has no auto-dismiss delegate callback; polling deliveredNotifications is the
+// only signal. We drain any already-queued delegate messages (didActivate / didDismissAlert) before
+// falling back to treating the disappearance as a silent auto-dismiss. This removes all timing
+// heuristics: if a real callback was queued, it fires during the runUntilDate: drain and wins.
+static void resolveAutoDismiss(const char* uuid) {
+    if (rust_notification_is_done(uuid)) return;   // a real callback already won
+    // Drain delegate messages already queued on this run loop, then re-check.
+    [[NSRunLoop currentRunLoop] runUntilDate:[NSDate date]];
+    if (rust_notification_is_done(uuid)) return;
+    rust_notification_auto_dismissed(uuid);
+}
+
+// sendNotification — delivers or schedules a notification identified by notificationId (C string).
+// shouldWait: if NO, returns immediately after delivery (fire-and-forget).
+// if YES, blocks until the user interacts or the notification is auto-dismissed.
+// Result is communicated back to Rust via rust_notification_activated / rust_notification_dismissed /
+// rust_notification_auto_dismissed callbacks.
+void sendNotification(NSString* title, NSString* subtitle, NSString* message, NSDictionary* options, const char* notificationId, BOOL shouldWait) {
     @autoreleasepool {
-        // For a list of available notification options, see https://developer.apple.com/documentation/foundation/nsusernotification?language=objc
-
         NSUserNotificationCenter* notificationCenter = [NSUserNotificationCenter defaultUserNotificationCenter];
-        NotificationCenterDelegate* ncDelegate = [[NotificationCenterDelegate alloc] init];
-        notificationCenter.delegate = ncDelegate;
-
-        // By default, do not wait for interaction unless an action or schedule is set.
-        // This can be overriden with `asynchronous` in order to always "fire and forget"
-        ncDelegate.keepRunning = NO;
 
         NSUserNotification* userNotification = [[NSUserNotification alloc] init];
         BOOL isScheduled = NO;
 
-        // wasAutoDismissed() needs this to find the right notification later
-        userNotification.identifier = [[NSUUID UUID] UUIDString];
+        NSString* identifierString = [NSString stringWithUTF8String:notificationId];
+        userNotification.identifier = identifierString;
 
         // Basic text
         userNotification.title = title;
@@ -63,17 +80,13 @@ NSDictionary* sendNotification(NSString* title, NSString* subtitle, NSString* me
 
         // Delivery Date/Schedule
         if (options[@"deliveryDate"] && ![options[@"deliveryDate"] isEqualToString:@""]) {
-            ncDelegate.keepRunning = YES;
             double deliveryDate = [options[@"deliveryDate"] doubleValue];
-            NSDate* scheduleTime = [NSDate dateWithTimeIntervalSince1970:deliveryDate];
-            userNotification.deliveryDate = scheduleTime;
-            NSLog(@"Delivery date option passed as %@ converted to %f resulting in %@", options[@"deliveryDate"], deliveryDate, scheduleTime);
+            userNotification.deliveryDate = [NSDate dateWithTimeIntervalSince1970:deliveryDate];
             isScheduled = YES;
         }
 
         // Main Actions Button (defaults to "Show")
         if (options[@"mainButtonLabel"] && ![options[@"mainButtonLabel"] isEqualToString:@""]) {
-            ncDelegate.keepRunning = YES;
             userNotification.actionButtonTitle = options[@"mainButtonLabel"];
             userNotification.hasActionButton = 1;
         } else {
@@ -82,11 +95,8 @@ NSDictionary* sendNotification(NSString* title, NSString* subtitle, NSString* me
 
         // Dropdown actions
         if (options[@"actions"] && ![options[@"actions"] isEqualToString:@""]) {
-            ncDelegate.keepRunning = YES;
             [userNotification setValue:@YES forKey:@"_showsButtons"];
-
             NSArray* myActions = [options[@"actions"] componentsSeparatedByString:@","];
-
             if (myActions.count > 1) {
                 [userNotification setValue:@YES forKey:@"_alwaysShowAlternateActionMenu"];
                 [userNotification setValue:myActions forKey:@"_alternateActionButtonTitles"];
@@ -95,44 +105,27 @@ NSDictionary* sendNotification(NSString* title, NSString* subtitle, NSString* me
 
         // Close/Other button (defaults to "Cancel")
         if (options[@"closeButtonLabel"] && ![options[@"closeButtonLabel"] isEqualToString:@""]) {
-            ncDelegate.keepRunning = YES;
-            ncDelegate.waitForClose = YES;
             [userNotification setValue:@YES forKey:@"_showsButtons"];
             userNotification.otherButtonTitle = options[@"closeButtonLabel"];
         }
 
         // Reply to the notification with a text field
         if (options[@"response"] && ![options[@"response"] isEqualToString:@""]) {
-            ncDelegate.keepRunning = YES;
             userNotification.hasReplyButton = 1;
             userNotification.responsePlaceholder = options[@"mainButtonLabel"];
-        }
-
-        // Wait for click
-        if (options[@"click"] && [options[@"click"] isEqualToString:@"yes"]) {
-            ncDelegate.keepRunning = YES;
-            ncDelegate.waitForClick = YES;
         }
 
         // Change the icon of the app in the notification
         if (options[@"appIcon"] && ![options[@"appIcon"] isEqualToString:@""]) {
             NSImage* icon = getImageFromURL(options[@"appIcon"]);
-            // replacement app icon
             [userNotification setValue:icon forKey:@"_identityImage"];
             [userNotification setValue:@(false) forKey:@"_identityImageHasBorder"];
         }
+
         // Change the additional content image
         if (options[@"contentImage"] && ![options[@"contentImage"] isEqualToString:@""]) {
             userNotification.contentImage = getImageFromURL(options[@"contentImage"]);
         }
-
-        // If set to asynchronous, do not wait for actions
-        if (options[@"asynchronous"] && [options[@"asynchronous"] isEqualToString:@"yes"]) {
-            ncDelegate.keepRunning = NO;
-        }
-
-        // create before delivery so delegate callbacks never see a nil semaphore
-        ncDelegate.doneSemaphore = dispatch_semaphore_create(0);
 
         // Send or schedule notification
         if (isScheduled) {
@@ -141,55 +134,138 @@ NSDictionary* sendNotification(NSString* title, NSString* subtitle, NSString* me
             [notificationCenter deliverNotification:userNotification];
         }
 
+        if (!shouldWait) {
+            // Block until didDeliverNotification: confirms the async XPC delivery completed,
+            // so a fire-and-forget caller can't exit before the notification is shown.
+            // Scheduled notifications are excluded — their delivery date is in the future and
+            // didDeliverNotification: won't fire until then.  Bounded by a safety timeout so
+            // we never hang if the callback is never delivered.
+            if (!isScheduled) {
+                if ([NSThread isMainThread]) {
+                    NSDate* deadline = [NSDate dateWithTimeIntervalSinceNow:2.0];
+                    while (!rust_notification_is_delivered(notificationId) &&
+                           [deadline timeIntervalSinceNow] > 0) {
+                        [[NSRunLoop currentRunLoop]
+                            runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.05]];
+                    }
+                } else {
+                    // Blocks on a timed Condvar; returns once delivered or after 2s.
+                    rust_wait_for_delivery(notificationId);
+                }
+            }
+            return;
+        }
+
         [NSThread sleepForTimeInterval:0.1f];
 
-        // auto-dismiss never calls the delegate so we check deliveredNotifications manually
+        // auto-dismiss: notification disappeared from deliveredNotifications without a callback
         BOOL (^wasAutoDismissed)(void) = ^BOOL {
-          for (NSUserNotification* n in notificationCenter.deliveredNotifications) {
-              if ([n.identifier isEqualToString:userNotification.identifier])
-                  return NO;
-          }
-          return YES;
+            for (NSUserNotification* n in notificationCenter.deliveredNotifications) {
+                if ([n.identifier isEqualToString:identifierString])
+                    return NO;
+            }
+            return YES;
         };
 
         if ([NSThread isMainThread]) {
-            // spin the run loop so callbacks are delivered on this thread
-            while (ncDelegate.keepRunning) {
+            // Spin the run loop so delegate callbacks are delivered on this thread.
+            // rust_notification_is_done returns true once a callback has signaled completion.
+            while (!rust_notification_is_done(notificationId)) {
                 [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.1]];
-                if (wasAutoDismissed())
-                    ncDelegate.keepRunning = NO;
+                if (wasAutoDismissed()) resolveAutoDismiss(notificationId);
             }
         } else {
-            // callbacks come in on the main thread; caller must keep its run loop spinning (#86)
-            if (ncDelegate.keepRunning) {
-                dispatch_semaphore_t sem = ncDelegate.doneSemaphore;
-                NSTimer* dismissPoll = [NSTimer timerWithTimeInterval:0.5
-                                                              repeats:YES
-                                                                block:^(NSTimer* t) {
-                                                                  if (wasAutoDismissed()) {
-                                                                      ncDelegate.keepRunning = NO;
-                                                                      dispatch_semaphore_signal(sem);
-                                                                      [t invalidate];
-                                                                  }
-                                                                }];
-                [[NSRunLoop mainRunLoop] addTimer:dismissPoll forMode:NSDefaultRunLoopMode];
-                // FOREVER is safe: the delegate or the poll above will always signal
-                // once the user interacts, and we actively want to wait indefinitely
-                // for persistent alerts that have no auto-dismiss.
-                dispatch_semaphore_wait(sem, DISPATCH_TIME_FOREVER);
-                // invalidate must run on the thread that owns the timer's run loop
-                dispatch_async(dispatch_get_main_queue(), ^{
-                  [dismissPoll invalidate];
-                });
-            }
-        }
-
-        // XXX: prevents crash described in https://github.com/h4llow3En/mac-notification-sys/issues/64
-        // TODO: the underlying issue is not yet understood
-        if (ncDelegate.actionData != NULL) {
-            return ncDelegate.actionData;
-        } else {
-            return [[NSDictionary alloc] init];
+            // Callbacks come in on the main thread; start a dismiss-poll timer there and
+            // block this thread in Rust until a callback signals completion (#86).
+            NSTimer* dismissPoll = [NSTimer timerWithTimeInterval:0.5
+                                                          repeats:YES
+                                                            block:^(NSTimer* t) {
+                if (wasAutoDismissed()) {
+                    [t invalidate];
+                    resolveAutoDismiss(notificationId);
+                }
+            }];
+            [[NSRunLoop mainRunLoop] addTimer:dismissPoll forMode:NSDefaultRunLoopMode];
+            // Blocks until rust_notification_auto_dismissed / rust_notification_activated /
+            // rust_notification_dismissed signals the Condvar.
+            rust_wait_for_notification(notificationId);
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [dismissPoll invalidate];
+            });
         }
     }
+}
+
+@implementation NotificationCenterDelegate
+
+- (void)userNotificationCenter:(NSUserNotificationCenter*)center
+        didDeliverNotification:(NSUserNotification*)notification {
+    rust_notification_delivered([notification.identifier UTF8String]);
+}
+
+- (void)userNotificationCenter:(NSUserNotificationCenter*)center
+       didActivateNotification:(NSUserNotification*)notification {
+    const char* uuid = [notification.identifier UTF8String];
+
+    const char* activationType = "none";
+    const char* actionValue = NULL;
+    const char* actionValueIndex = NULL;
+
+    switch (notification.activationType) {
+        case NSUserNotificationActivationTypeActionButtonClicked:
+        case NSUserNotificationActivationTypeAdditionalActionClicked: {
+            NSArray* altTitles = [(NSObject*)notification valueForKey:@"_alternateActionButtonTitles"];
+            if ([altTitles count] > 1) {
+                NSNumber* altIdx = [(NSObject*)notification valueForKey:@"_alternateActionIndex"];
+                unsigned long long idx = [altIdx unsignedLongLongValue];
+                if (idx == (unsigned long long)LONG_MAX) {
+                    actionValue = [notification.actionButtonTitle UTF8String];
+                } else {
+                    actionValue = [altTitles[idx] UTF8String];
+                    actionValueIndex = [[NSString stringWithFormat:@"%llu", idx] UTF8String];
+                }
+            } else {
+                actionValue = [notification.actionButtonTitle UTF8String];
+            }
+            activationType = "actionClicked";
+            break;
+        }
+        case NSUserNotificationActivationTypeContentsClicked:
+            activationType = "contentsClicked";
+            break;
+        case NSUserNotificationActivationTypeReplied:
+            activationType = "replied";
+            actionValue = [notification.response.string UTF8String];
+            break;
+        case NSUserNotificationActivationTypeNone:
+        default:
+            break;
+    }
+
+    rust_notification_activated(uuid, activationType, actionValue, actionValueIndex);
+    [center removeDeliveredNotification:notification];
+}
+
+- (void)userNotificationCenter:(NSUserNotificationCenter*)center
+               didDismissAlert:(NSUserNotification*)notification {
+    rust_notification_dismissed(
+        [notification.identifier UTF8String],
+        [notification.otherButtonTitle UTF8String]
+    );
+    [center removeDeliveredNotification:notification];
+}
+
++ (instancetype)sharedDelegate {
+    static NotificationCenterDelegate* instance = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        instance = [[NotificationCenterDelegate alloc] init];
+        [NSUserNotificationCenter defaultUserNotificationCenter].delegate = instance;
+    });
+    return instance;
+}
+@end
+
+void ensureDelegateInitiated(void) {
+    [NotificationCenterDelegate sharedDelegate];
 }

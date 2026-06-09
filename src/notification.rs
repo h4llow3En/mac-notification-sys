@@ -1,7 +1,6 @@
 //! Custom structs and enums for mac-notification-sys.
 
-use crate::error::{NotificationError, NotificationResult};
-use crate::{ensure, ensure_application_set, sys};
+use crate::error::NotificationResult;
 use objc2::rc::Retained;
 use objc2_foundation::{NSDictionary, NSString};
 use std::default::Default;
@@ -302,45 +301,28 @@ impl<'a> Notification<'a> {
         NSDictionary::from_retained_objects(keys, &vals)
     }
 
+    /// Returns true if this notification configuration requires waiting for a user response.
+    pub(crate) fn needs_response(&self) -> bool {
+        if self.asynchronous == Some(true) {
+            return false;
+        }
+        self.main_button.is_some()
+            || self.close_button.is_some()
+            || self.wait_for_click
+            || self.delivery_date.is_some()
+    }
+
     /// Delivers a new notification
     ///
     /// Returns a `NotificationError` if a notification could not be delivered
     ///
     pub fn send(&self) -> NotificationResult<NotificationResponse> {
-        if let Some(delivery_date) = self.delivery_date {
-            ensure!(
-                delivery_date >= time::OffsetDateTime::now_utc().unix_timestamp() as f64,
-                NotificationError::ScheduleInThePast
-            );
-        };
-
-        let options = self.to_dictionary();
-
-        ensure_application_set()?;
-
-        let dictionary_response = unsafe {
-            sys::sendNotification(
-                NSString::from_str(self.title).deref(),
-                NSString::from_str(self.subtitle.unwrap_or("")).deref(),
-                NSString::from_str(self.message).deref(),
-                options.deref(),
-            )
-        };
-        ensure!(
-            dictionary_response
-                .objectForKey(NSString::from_str("error").deref())
-                .is_none(),
-            NotificationError::UnableToDeliver
-        );
-
-        let response = NotificationResponse::from_dictionary(dictionary_response);
-
-        Ok(response)
+        crate::send_notification(self.title, self.subtitle, self.message, Some(self))
     }
 }
 
 /// Response from the Notification
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum NotificationResponse {
     /// No interaction has occured
     None,
@@ -356,6 +338,7 @@ pub enum NotificationResponse {
 
 impl NotificationResponse {
     /// Create a NotificationResponse from the given Objective C NSDictionary
+    #[allow(dead_code)]
     pub(crate) fn from_dictionary(dictionary: Retained<NSDictionary<NSString, NSString>>) -> Self {
         let activation_type = dictionary
             .objectForKey(NSString::from_str("activationType").deref())
