@@ -56,10 +56,12 @@ static void uuidBytesFromNotification(NSUserNotification* n, unsigned char out[1
 // falling back to treating the disappearance as a silent auto-dismiss. This removes all timing
 // heuristics: if a real callback was queued, it fires during the runUntilDate: drain and wins.
 static void resolveAutoDismiss(const unsigned char* uuid) {
-    if (rust_notification_is_done(uuid)) return;   // a real callback already won
+    if (rust_notification_is_done(uuid))
+        return; // a real callback already won
     // Drain delegate messages already queued on this run loop, then re-check.
     [[NSRunLoop currentRunLoop] runUntilDate:[NSDate date]];
-    if (rust_notification_is_done(uuid)) return;
+    if (rust_notification_is_done(uuid))
+        return;
     rust_notification_auto_dismissed(uuid);
 }
 
@@ -176,11 +178,11 @@ void sendNotification(NSString* title, NSString* subtitle, NSString* message, NS
 
         // auto-dismiss: notification disappeared from deliveredNotifications without a callback
         BOOL (^wasAutoDismissed)(void) = ^BOOL {
-            for (NSUserNotification* n in notificationCenter.deliveredNotifications) {
-                if ([n.identifier isEqualToString:identifierString])
-                    return NO;
-            }
-            return YES;
+          for (NSUserNotification* n in notificationCenter.deliveredNotifications) {
+              if ([n.identifier isEqualToString:identifierString])
+                  return NO;
+          }
+          return YES;
         };
 
         if ([NSThread isMainThread]) {
@@ -188,7 +190,8 @@ void sendNotification(NSString* title, NSString* subtitle, NSString* message, NS
             // rust_notification_is_done returns true once a callback has signaled completion.
             while (!rust_notification_is_done(notificationId)) {
                 [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.1]];
-                if (wasAutoDismissed()) resolveAutoDismiss(notificationId);
+                if (wasAutoDismissed())
+                    resolveAutoDismiss(notificationId);
             }
         } else {
             // Callbacks come in on the main thread; start a dismiss-poll timer there and
@@ -201,17 +204,17 @@ void sendNotification(NSString* title, NSString* subtitle, NSString* message, NS
             NSTimer* dismissPoll = [NSTimer timerWithTimeInterval:0.5
                                                           repeats:YES
                                                             block:^(NSTimer* t) {
-                if (wasAutoDismissed()) {
-                    [t invalidate];
-                    resolveAutoDismiss(notificationIdData.bytes);
-                }
-            }];
+                                                              if (wasAutoDismissed()) {
+                                                                  [t invalidate];
+                                                                  resolveAutoDismiss(notificationIdData.bytes);
+                                                              }
+                                                            }];
             [[NSRunLoop mainRunLoop] addTimer:dismissPoll forMode:NSDefaultRunLoopMode];
             // Blocks until rust_notification_auto_dismissed / rust_notification_activated /
             // rust_notification_dismissed signals the Condvar.
             rust_wait_for_notification(notificationId);
             dispatch_async(dispatch_get_main_queue(), ^{
-                [dismissPoll invalidate];
+              [dismissPoll invalidate];
             });
         }
     }
@@ -282,8 +285,8 @@ void sendNotification(NSString* title, NSString* subtitle, NSString* message, NS
     static NotificationCenterDelegate* instance = nil;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        instance = [[NotificationCenterDelegate alloc] init];
-        [NSUserNotificationCenter defaultUserNotificationCenter].delegate = instance;
+      instance = [[NotificationCenterDelegate alloc] init];
+      [NSUserNotificationCenter defaultUserNotificationCenter].delegate = instance;
     });
     return instance;
 }

@@ -7,8 +7,6 @@ fn main() {
 
     set_application(&bundle).unwrap();
 
-
-
     let response = send_notification(
         "take response",
         None,
@@ -36,7 +34,7 @@ fn main() {
     .unwrap();
     handle_repsonse(response);
 
-        let response = send_notification(
+    let response = send_notification(
         "main button with drop down",
         None,
         "choose wisely",

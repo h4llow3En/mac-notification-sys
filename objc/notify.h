@@ -34,10 +34,10 @@ extern void rust_wait_for_delivery(const unsigned char* uuid);
 @end
 
 BOOL installNSBundleHook(void) {
-    Class class = objc_getClass("NSBundle");
-    if (class) {
-        method_exchangeImplementations(class_getInstanceMethod(class, @selector(bundleIdentifier)),
-                                       class_getInstanceMethod(class, @selector(__bundleIdentifier)));
+    Class cls = objc_getClass("NSBundle");
+    if (cls) {
+        method_exchangeImplementations(class_getInstanceMethod(cls, @selector(bundleIdentifier)),
+                                       class_getInstanceMethod(cls, @selector(__bundleIdentifier)));
         return YES;
     }
     return NO;

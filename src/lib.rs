@@ -29,8 +29,8 @@ use std::collections::HashMap;
 use std::ffi::CStr;
 use std::ops::Deref;
 use std::os::raw::c_char;
-use std::sync::{Arc, Condvar, LazyLock, Mutex, Once};
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Condvar, LazyLock, Mutex, Once};
 
 static INIT_APPLICATION_SET: Once = Once::new();
 
@@ -99,7 +99,9 @@ unsafe fn uuid_from_ptr(ptr: *const u8) -> Option<[u8; 16]> {
     if ptr.is_null() {
         return None;
     }
-    unsafe { std::slice::from_raw_parts(ptr, 16) }.try_into().ok()
+    unsafe { std::slice::from_raw_parts(ptr, 16) }
+        .try_into()
+        .ok()
 }
 
 fn complete_notification(id: &[u8; 16], response: NotificationResponse) {
@@ -131,7 +133,9 @@ pub extern "C" fn rust_notification_activated(
             Some(b) => b,
             None => return,
         };
-        let action_value = unsafe { str_from_ptr(action_value) }.unwrap_or("").to_owned();
+        let action_value = unsafe { str_from_ptr(action_value) }
+            .unwrap_or("")
+            .to_owned();
 
         log::debug!("notification activated: type={activation_type}");
 
@@ -147,16 +151,15 @@ pub extern "C" fn rust_notification_activated(
 
 /// Called from ObjC delegate when a notification is dismissed via the close button.
 #[unsafe(no_mangle)]
-pub extern "C" fn rust_notification_dismissed(
-    uuid: *const u8,
-    button_title: *const c_char,
-) {
+pub extern "C" fn rust_notification_dismissed(uuid: *const u8, button_title: *const c_char) {
     let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         let id = match unsafe { uuid_from_ptr(uuid) } {
             Some(b) => b,
             None => return,
         };
-        let title = unsafe { str_from_ptr(button_title) }.unwrap_or("").to_owned();
+        let title = unsafe { str_from_ptr(button_title) }
+            .unwrap_or("")
+            .to_owned();
         log::debug!("notification dismissed");
         complete_notification(&id, NotificationResponse::CloseButton(title));
     }));
@@ -346,11 +349,8 @@ pub fn get_bundle_identifier_or_default(app_name: &str) -> String {
 
 /// Search for a BundleIdentifier of an given appname.
 pub fn get_bundle_identifier(app_name: &str) -> Option<String> {
-    unsafe {
-        sys::getBundleIdentifier(NSString::from_str(app_name).deref())
-            .as_ref()
-    }
-    .map(NSString::to_string)
+    unsafe { sys::getBundleIdentifier(NSString::from_str(app_name).deref()).as_ref() }
+        .map(NSString::to_string)
 }
 
 /// Sets the application if not already set

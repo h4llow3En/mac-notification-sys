@@ -333,4 +333,3 @@ pub enum NotificationResponse {
     /// User submitted text to the input text field
     Reply(String),
 }
-
