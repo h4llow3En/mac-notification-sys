@@ -221,9 +221,9 @@ void sendNotification(NSString* title, NSString* subtitle, NSString* message, NS
     unsigned char bytes[16];
     uuidBytesFromNotification(notification, bytes);
 
-    const char* activationType = "none";
+    uint8_t activationType = 0;
     const char* actionValue = NULL;
-    const char* actionValueIndex = NULL;
+    int64_t actionValueIndex = -1;
 
     switch (notification.activationType) {
         case NSUserNotificationActivationTypeActionButtonClicked:
@@ -236,19 +236,19 @@ void sendNotification(NSString* title, NSString* subtitle, NSString* message, NS
                     actionValue = [notification.actionButtonTitle UTF8String];
                 } else {
                     actionValue = [altTitles[idx] UTF8String];
-                    actionValueIndex = [[NSString stringWithFormat:@"%llu", idx] UTF8String];
+                    actionValueIndex = (int64_t)idx;
                 }
             } else {
                 actionValue = [notification.actionButtonTitle UTF8String];
             }
-            activationType = "actionClicked";
+            activationType = 1;
             break;
         }
         case NSUserNotificationActivationTypeContentsClicked:
-            activationType = "contentsClicked";
+            activationType = 2;
             break;
         case NSUserNotificationActivationTypeReplied:
-            activationType = "replied";
+            activationType = 3;
             actionValue = [notification.response.string UTF8String];
             break;
         case NSUserNotificationActivationTypeNone:

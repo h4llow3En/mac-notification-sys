@@ -11,7 +11,9 @@ void sendNotification(NSString* title, NSString* subtitle, NSString* message, NS
 void ensureDelegateInitiated(void);
 
 // Rust callbacks — implemented in lib.rs, called from ObjC delegate
-extern void rust_notification_activated(const unsigned char* uuid, const char* activationType, const char* actionValue, const char* actionValueIndex);
+// activationType: 0=none, 1=actionClicked, 2=contentsClicked, 3=replied
+// actionValueIndex: selected dropdown index, or -1 if not applicable
+extern void rust_notification_activated(const unsigned char* uuid, uint8_t activationType, const char* actionValue, int64_t actionValueIndex);
 extern void rust_notification_dismissed(const unsigned char* uuid, const char* buttonTitle);
 extern void rust_notification_auto_dismissed(const unsigned char* uuid);
 extern BOOL rust_notification_is_done(const unsigned char* uuid);

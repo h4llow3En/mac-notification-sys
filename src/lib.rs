@@ -105,27 +105,28 @@ fn complete_notification(id: &[u8; 16], response: NotificationResponse) {
 }
 
 /// Called from ObjC delegate when a notification is activated (clicked/replied/action).
+/// `activation_type`: 0=none, 1=actionClicked, 2=contentsClicked, 3=replied
+/// `_action_value_index`: selected dropdown index, or -1 if not applicable
 #[unsafe(no_mangle)]
 pub extern "C" fn rust_notification_activated(
     uuid: *const u8,
-    activation_type: *const c_char,
+    activation_type: u8,
     action_value: *const c_char,
-    _action_value_index: *const c_char,
+    _action_value_index: i64,
 ) {
     let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         let id = match unsafe { uuid_from_ptr(uuid) } {
             Some(b) => b,
             None => return,
         };
-        let activation_type = unsafe { str_from_ptr(activation_type) }.unwrap_or("");
         let action_value = unsafe { str_from_ptr(action_value) }.unwrap_or("").to_owned();
 
         log::debug!("notification activated: type={activation_type}");
 
         let response = match activation_type {
-            "actionClicked" => NotificationResponse::ActionButton(action_value),
-            "contentsClicked" => NotificationResponse::Click,
-            "replied" => NotificationResponse::Reply(action_value),
+            1 => NotificationResponse::ActionButton(action_value),
+            2 => NotificationResponse::Click,
+            3 => NotificationResponse::Reply(action_value),
             _ => NotificationResponse::None,
         };
         complete_notification(&id, response);
@@ -445,10 +446,9 @@ mod tests {
         let id: [u8; 16] = [0x9a, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1];
         insert_test_entry(id);
 
-        let act_type = CString::new("replied").unwrap();
         let value = CString::new("hello world").unwrap();
 
-        rust_notification_activated(id.as_ptr(), act_type.as_ptr(), value.as_ptr(), std::ptr::null());
+        rust_notification_activated(id.as_ptr(), 3, value.as_ptr(), -1);
 
         assert!(rust_notification_is_done(id.as_ptr()));
         let entry = remove_entry(id).unwrap();
@@ -463,10 +463,9 @@ mod tests {
         let id: [u8; 16] = [0x9b, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2];
         insert_test_entry(id);
 
-        let act_type = CString::new("actionClicked").unwrap();
         let value = CString::new("Delete").unwrap();
 
-        rust_notification_activated(id.as_ptr(), act_type.as_ptr(), value.as_ptr(), std::ptr::null());
+        rust_notification_activated(id.as_ptr(), 1, value.as_ptr(), -1);
 
         assert!(rust_notification_is_done(id.as_ptr()));
         let entry = remove_entry(id).unwrap();
@@ -512,13 +511,12 @@ mod tests {
         let id: [u8; 16] = [0x9e, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5];
         insert_test_entry(id);
 
-        let act_type = CString::new("replied").unwrap();
         let first = CString::new("first").unwrap();
         let second = CString::new("second").unwrap();
 
-        rust_notification_activated(id.as_ptr(), act_type.as_ptr(), first.as_ptr(), std::ptr::null());
+        rust_notification_activated(id.as_ptr(), 3, first.as_ptr(), -1);
         // Second call must be ignored because done=true after the first.
-        rust_notification_activated(id.as_ptr(), act_type.as_ptr(), second.as_ptr(), std::ptr::null());
+        rust_notification_activated(id.as_ptr(), 3, second.as_ptr(), -1);
 
         let entry = remove_entry(id).unwrap();
         assert_eq!(
