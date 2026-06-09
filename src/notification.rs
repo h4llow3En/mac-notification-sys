@@ -4,7 +4,6 @@ use crate::error::NotificationResult;
 use objc2::rc::Retained;
 use objc2_foundation::{NSDictionary, NSString};
 use std::default::Default;
-use std::ops::Deref;
 
 /// Possible actions accessible through the main button of the notification
 #[derive(Clone, Debug)]
@@ -302,14 +301,13 @@ impl<'a> Notification<'a> {
     }
 
     /// Returns true if this notification configuration requires waiting for a user response.
+    /// Scheduled notifications (`delivery_date`) are fire-and-forget — the caller returns
+    /// immediately after scheduling and does not block until the future delivery time.
     pub(crate) fn needs_response(&self) -> bool {
         if self.asynchronous == Some(true) {
             return false;
         }
-        self.main_button.is_some()
-            || self.close_button.is_some()
-            || self.wait_for_click
-            || self.delivery_date.is_some()
+        self.main_button.is_some() || self.close_button.is_some() || self.wait_for_click
     }
 
     /// Delivers a new notification
@@ -336,35 +334,3 @@ pub enum NotificationResponse {
     Reply(String),
 }
 
-impl NotificationResponse {
-    /// Create a NotificationResponse from the given Objective C NSDictionary
-    #[allow(dead_code)]
-    pub(crate) fn from_dictionary(dictionary: Retained<NSDictionary<NSString, NSString>>) -> Self {
-        let activation_type = dictionary
-            .objectForKey(NSString::from_str("activationType").deref())
-            .map(|str| str.to_string());
-
-        match activation_type.as_deref() {
-            Some("actionClicked") => NotificationResponse::ActionButton(
-                match dictionary.objectForKey(NSString::from_str("activationValue").deref()) {
-                    Some(str) => str.to_string(),
-                    None => String::from(""),
-                },
-            ),
-            Some("closeClicked") => NotificationResponse::CloseButton(
-                match dictionary.objectForKey(NSString::from_str("activationValue").deref()) {
-                    Some(str) => str.to_string(),
-                    None => String::from(""),
-                },
-            ),
-            Some("replied") => NotificationResponse::Reply(
-                match dictionary.objectForKey(NSString::from_str("activationValue").deref()) {
-                    Some(str) => str.to_string(),
-                    None => String::from(""),
-                },
-            ),
-            Some("contentsClicked") => NotificationResponse::Click,
-            _ => NotificationResponse::None,
-        }
-    }
-}
