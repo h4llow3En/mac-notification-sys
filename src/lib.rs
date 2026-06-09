@@ -14,6 +14,10 @@
 )]
 #![cfg(target_os = "macos")]
 #![allow(improper_ctypes)]
+// The extern "C" callbacks called from ObjC unavoidably take raw pointer arguments.
+// They cannot be marked `unsafe` (Rust forbids unsafe extern "C" fn that are exported),
+// yet they must dereference those pointers — suppress the lint crate-wide for this pattern.
+#![allow(clippy::not_unsafe_ptr_arg_deref)]
 
 pub mod error;
 mod notification;
@@ -25,26 +29,30 @@ use std::collections::HashMap;
 use std::ffi::CStr;
 use std::ops::Deref;
 use std::os::raw::c_char;
-use std::sync::{Arc, Condvar, Mutex, Once, OnceLock};
+use std::sync::{Arc, Condvar, LazyLock, Mutex, Once};
 use std::sync::atomic::{AtomicBool, Ordering};
 
 static INIT_APPLICATION_SET: Once = Once::new();
-static INIT_DELEGATE: Once = Once::new();
 
 struct PendingEntry {
+    /// Interaction result — written by `complete_notification`, read after ObjC returns.
     result: Mutex<NotificationResponse>,
+    /// Set to true once a response callback fires (first-wins).
     done: AtomicBool,
-    /// Set to true once `didDeliverNotification:` fires — used by fire-and-forget
-    /// sends to ensure the process doesn't exit before the notification is shown.
-    delivered: AtomicBool,
+    /// Wakes `rust_wait_for_notification` when `done` becomes true.
     condvar: Condvar,
+    /// Set to true once `didDeliverNotification:` fires.
+    /// Kept in a separate Mutex+Condvar so the delivery path does not borrow
+    /// `result`'s lock and the two wait conditions stay independent.
+    delivered: Mutex<bool>,
+    delivered_cv: Condvar,
 }
 
-// TODO: this could be a LazyLock
-static PENDING: OnceLock<Mutex<HashMap<[u8; 16], Arc<PendingEntry>>>> = OnceLock::new();
+static PENDING: LazyLock<Mutex<HashMap<[u8; 16], Arc<PendingEntry>>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
 
 fn pending() -> &'static Mutex<HashMap<[u8; 16], Arc<PendingEntry>>> {
-    PENDING.get_or_init(|| Mutex::new(HashMap::new()))
+    &PENDING
 }
 
 /// RAII guard — removes the `PENDING` entry for `id` on drop.
@@ -96,8 +104,12 @@ unsafe fn uuid_from_ptr(ptr: *const u8) -> Option<[u8; 16]> {
 
 fn complete_notification(id: &[u8; 16], response: NotificationResponse) {
     if let Some(entry) = pending().lock().unwrap().get(id).cloned() {
+        // Acquire result lock BEFORE checking done so the check-and-set is atomic.
+        // Without this, two concurrent callers could both observe done=false,
+        // both enter the block, and the second would overwrite the first's result.
+        let mut result = entry.result.lock().unwrap();
         if !entry.done.load(Ordering::Acquire) {
-            *entry.result.lock().unwrap() = response;
+            *result = response;
             entry.done.store(true, Ordering::Release);
             entry.condvar.notify_all();
         }
@@ -213,11 +225,8 @@ pub extern "C" fn rust_notification_delivered(uuid: *const u8) {
             None => return,
         };
         if let Some(entry) = pending().lock().unwrap().get(&id).cloned() {
-            // Hold result lock while storing + notifying to prevent a lost wakeup
-            // on the condvar in rust_wait_for_delivery.
-            let _g = entry.result.lock().unwrap();
-            entry.delivered.store(true, Ordering::Release);
-            entry.condvar.notify_all();
+            *entry.delivered.lock().unwrap() = true;
+            entry.delivered_cv.notify_all();
         }
     }));
 }
@@ -236,7 +245,7 @@ pub extern "C" fn rust_notification_is_delivered(uuid: *const u8) -> bool {
             .lock()
             .unwrap()
             .get(&id)
-            .map(|e| e.delivered.load(Ordering::Acquire))
+            .map(|e| *e.delivered.lock().unwrap())
             .unwrap_or(true)
     }))
     .unwrap_or(true)
@@ -257,11 +266,11 @@ pub extern "C" fn rust_wait_for_delivery(uuid: *const u8) {
             Some(e) => e,
             None => return,
         };
-        let guard = entry.result.lock().unwrap();
-        let _ = entry.condvar.wait_timeout_while(
+        let guard = entry.delivered.lock().unwrap();
+        let _ = entry.delivered_cv.wait_timeout_while(
             guard,
             std::time::Duration::from_secs(2),
-            |_| !entry.delivered.load(Ordering::Acquire),
+            |delivered| !*delivered,
         );
     }));
 }
@@ -295,23 +304,23 @@ pub fn send_notification(
     };
 
     ensure_application_set()?;
-    ensure_delegate_initiated()?;
+    ensure_delegate_initiated();
 
     let should_wait = options.map(|o| o.needs_response()).unwrap_or(false);
     let options_dict = options.unwrap_or(&Notification::new()).to_dictionary();
 
     let id: [u8; 16] = uuid::Uuid::new_v4().into_bytes();
 
-    pending().lock().unwrap().insert(
-        id,
-        Arc::new(PendingEntry {
-            result: Mutex::new(NotificationResponse::None),
-            done: AtomicBool::new(!should_wait),
-            delivered: AtomicBool::new(false),
-            condvar: Condvar::new(),
-        }),
-    );
-    // Cleaned up by drop even if ObjC or result-reading panics.
+    let entry = Arc::new(PendingEntry {
+        result: Mutex::new(NotificationResponse::None),
+        done: AtomicBool::new(!should_wait),
+        condvar: Condvar::new(),
+        delivered: Mutex::new(false),
+        delivered_cv: Condvar::new(),
+    });
+    pending().lock().unwrap().insert(id, Arc::clone(&entry));
+    // PendingGuard performs the sole remove — both on the normal path and on panic.
+    // Reading the result from `entry` directly avoids a second remove call.
     let _guard = PendingGuard { id };
 
     unsafe {
@@ -325,13 +334,7 @@ pub fn send_notification(
         );
     }
 
-    let result = pending()
-        .lock()
-        .unwrap()
-        .remove(&id)
-        .map(|a| a.result.lock().unwrap().clone())
-        .unwrap_or(NotificationResponse::None);
-
+    let result = entry.result.lock().unwrap().clone();
     Ok(result)
 }
 
@@ -359,9 +362,10 @@ fn ensure_application_set() -> NotificationResult<()> {
     set_application(&bundle)
 }
 
-fn ensure_delegate_initiated() -> NotificationResult<()> {
-    INIT_DELEGATE.call_once(|| unsafe { sys::ensureDelegateInitiated() });
-    Ok(())
+fn ensure_delegate_initiated() {
+    // `sharedDelegate` in ObjC is already guarded by `dispatch_once`; calling it here
+    // is idempotent and thread-safe without an extra Rust-side Once.
+    unsafe { sys::ensureDelegateInitiated() };
 }
 
 /// Set the application which delivers or schedules a notification
@@ -389,8 +393,9 @@ mod tests {
         let entry = Arc::new(PendingEntry {
             result: Mutex::new(NotificationResponse::None),
             done: AtomicBool::new(false),
-            delivered: AtomicBool::new(false),
             condvar: Condvar::new(),
+            delivered: Mutex::new(false),
+            delivered_cv: Condvar::new(),
         });
         pending().lock().unwrap().insert(id, Arc::clone(&entry));
         entry
@@ -427,8 +432,10 @@ mod tests {
     }
 
     #[test]
-    fn needs_response_true_for_delivery_date() {
-        assert!(Notification::new().delivery_date(1.0).needs_response());
+    fn needs_response_false_for_delivery_date() {
+        // Scheduled notifications are fire-and-forget — delivery_date alone must not
+        // cause the caller to block waiting for interaction.
+        assert!(!Notification::new().delivery_date(1.0).needs_response());
     }
 
     #[test]
@@ -537,7 +544,7 @@ mod tests {
         rust_notification_delivered(id.as_ptr());
 
         assert!(rust_notification_is_delivered(id.as_ptr()));
-        assert!(entry.delivered.load(Ordering::Acquire));
+        assert!(*entry.delivered.lock().unwrap());
         // done must NOT be set — delivered is orthogonal to the interaction/done flow.
         assert!(!entry.done.load(Ordering::Acquire));
 
