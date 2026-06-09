@@ -37,10 +37,17 @@ NSImage* getImageFromURL(NSString* url) {
 // Extracts the raw UUID bytes from a notification's identifier string.
 // NSUserNotification.identifier is an NSString (UUID canonical form); we reconstruct
 // the NSUUID and write 16 bytes into `out` so Rust callbacks receive plain bytes.
+// If the identifier is nil or not a valid UUID string (e.g. on very old OS versions
+// or for notifications we did not create), out is zeroed — the Rust side will find
+// no matching PENDING entry and silently discard the callback.
 static void uuidBytesFromNotification(NSUserNotification* n, unsigned char out[16]) {
-    NSUUID* uuid = [[NSUUID alloc] initWithUUIDString:n.identifier];
-    [uuid getUUIDBytes:out];
-    [uuid release];
+    NSUUID* uuid = n.identifier ? [[NSUUID alloc] initWithUUIDString:n.identifier] : nil;
+    if (uuid) {
+        [uuid getUUIDBytes:out];
+        [uuid release];
+    } else {
+        memset(out, 0, 16);
+    }
 }
 
 // resolveAutoDismiss — called on the main thread when wasAutoDismissed() fires.
@@ -167,8 +174,6 @@ void sendNotification(NSString* title, NSString* subtitle, NSString* message, NS
             return;
         }
 
-        [NSThread sleepForTimeInterval:0.1f];
-
         // auto-dismiss: notification disappeared from deliveredNotifications without a callback
         BOOL (^wasAutoDismissed)(void) = ^BOOL {
             for (NSUserNotification* n in notificationCenter.deliveredNotifications) {
@@ -188,12 +193,17 @@ void sendNotification(NSString* title, NSString* subtitle, NSString* message, NS
         } else {
             // Callbacks come in on the main thread; start a dismiss-poll timer there and
             // block this thread in Rust until a callback signals completion (#86).
+            // Copy the 16 UUID bytes into NSData so the block owns them for its lifetime.
+            // notificationId points to a Rust stack local that is freed once
+            // rust_wait_for_notification returns and send_notification unwinds — the raw
+            // pointer must not be used after that point.
+            NSData* notificationIdData = [NSData dataWithBytes:notificationId length:16];
             NSTimer* dismissPoll = [NSTimer timerWithTimeInterval:0.5
                                                           repeats:YES
                                                             block:^(NSTimer* t) {
                 if (wasAutoDismissed()) {
                     [t invalidate];
-                    resolveAutoDismiss(notificationId);
+                    resolveAutoDismiss(notificationIdData.bytes);
                 }
             }];
             [[NSRunLoop mainRunLoop] addTimer:dismissPoll forMode:NSDefaultRunLoopMode];
