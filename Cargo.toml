@@ -26,6 +26,7 @@ objc2-foundation = "0.3"
 objc2 = "0.6"
 time = "0.3"
 log = "0.4"
+uuid = { version = "1", features = ["v4"] }
 
 [dev-dependencies]
 env_logger = "0.11"

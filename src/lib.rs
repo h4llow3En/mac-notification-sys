@@ -22,16 +22,14 @@ use error::{ApplicationError, NotificationError, NotificationResult};
 pub use notification::{MainButton, Notification, NotificationResponse, Sound};
 use objc2_foundation::NSString;
 use std::collections::HashMap;
-use std::ffi::{CStr, CString};
+use std::ffi::CStr;
 use std::ops::Deref;
 use std::os::raw::c_char;
-use std::process;
 use std::sync::{Arc, Condvar, Mutex, Once, OnceLock};
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, Ordering};
 
 static INIT_APPLICATION_SET: Once = Once::new();
 static INIT_DELEGATE: Once = Once::new();
-static NOTIFICATION_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 struct PendingEntry {
     result: Mutex<NotificationResponse>,
@@ -43,9 +41,9 @@ struct PendingEntry {
 }
 
 // TODO: this could be a LazyLock
-static PENDING: OnceLock<Mutex<HashMap<String, Arc<PendingEntry>>>> = OnceLock::new();
+static PENDING: OnceLock<Mutex<HashMap<[u8; 16], Arc<PendingEntry>>>> = OnceLock::new();
 
-fn pending() -> &'static Mutex<HashMap<String, Arc<PendingEntry>>> {
+fn pending() -> &'static Mutex<HashMap<[u8; 16], Arc<PendingEntry>>> {
     PENDING.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
@@ -53,7 +51,7 @@ fn pending() -> &'static Mutex<HashMap<String, Arc<PendingEntry>>> {
 /// Ensures the entry is cleaned up even when `send_notification` panics between
 /// the `insert` and the explicit `remove`.
 struct PendingGuard {
-    id: String,
+    id: [u8; 16],
 }
 
 impl Drop for PendingGuard {
@@ -64,7 +62,6 @@ impl Drop for PendingGuard {
 
 mod sys {
     use objc2_foundation::{NSDictionary, NSString};
-    use std::os::raw::c_char;
     #[link(name = "notify")]
     unsafe extern "C" {
         pub fn sendNotification(
@@ -72,7 +69,7 @@ mod sys {
             subtitle: *const NSString,
             message: *const NSString,
             options: *const NSDictionary<NSString, NSString>,
-            notification_id: *const c_char,
+            notification_id: *const u8,
             should_wait: bool,
         );
         pub fn setApplication(newbundleIdentifier: *const NSString) -> bool;
@@ -90,7 +87,14 @@ unsafe fn str_from_ptr<'a>(ptr: *const c_char) -> Option<&'a str> {
     unsafe { CStr::from_ptr(ptr) }.to_str().ok()
 }
 
-fn complete_notification(id: &str, response: NotificationResponse) {
+unsafe fn uuid_from_ptr(ptr: *const u8) -> Option<[u8; 16]> {
+    if ptr.is_null() {
+        return None;
+    }
+    unsafe { std::slice::from_raw_parts(ptr, 16) }.try_into().ok()
+}
+
+fn complete_notification(id: &[u8; 16], response: NotificationResponse) {
     if let Some(entry) = pending().lock().unwrap().get(id).cloned() {
         if !entry.done.load(Ordering::Acquire) {
             *entry.result.lock().unwrap() = response;
@@ -103,14 +107,14 @@ fn complete_notification(id: &str, response: NotificationResponse) {
 /// Called from ObjC delegate when a notification is activated (clicked/replied/action).
 #[unsafe(no_mangle)]
 pub extern "C" fn rust_notification_activated(
-    uuid: *const c_char,
+    uuid: *const u8,
     activation_type: *const c_char,
     action_value: *const c_char,
     _action_value_index: *const c_char,
 ) {
     let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        let id = match unsafe { str_from_ptr(uuid) } {
-            Some(s) => s.to_owned(),
+        let id = match unsafe { uuid_from_ptr(uuid) } {
+            Some(b) => b,
             None => return,
         };
         let activation_type = unsafe { str_from_ptr(activation_type) }.unwrap_or("");
@@ -131,12 +135,12 @@ pub extern "C" fn rust_notification_activated(
 /// Called from ObjC delegate when a notification is dismissed via the close button.
 #[unsafe(no_mangle)]
 pub extern "C" fn rust_notification_dismissed(
-    uuid: *const c_char,
+    uuid: *const u8,
     button_title: *const c_char,
 ) {
     let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        let id = match unsafe { str_from_ptr(uuid) } {
-            Some(s) => s.to_owned(),
+        let id = match unsafe { uuid_from_ptr(uuid) } {
+            Some(b) => b,
             None => return,
         };
         let title = unsafe { str_from_ptr(button_title) }.unwrap_or("").to_owned();
@@ -147,10 +151,10 @@ pub extern "C" fn rust_notification_dismissed(
 
 /// Called from ObjC when a notification disappears without explicit user interaction.
 #[unsafe(no_mangle)]
-pub extern "C" fn rust_notification_auto_dismissed(uuid: *const c_char) {
+pub extern "C" fn rust_notification_auto_dismissed(uuid: *const u8) {
     let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        let id = match unsafe { str_from_ptr(uuid) } {
-            Some(s) => s.to_owned(),
+        let id = match unsafe { uuid_from_ptr(uuid) } {
+            Some(b) => b,
             None => return,
         };
         log::debug!("notification auto-dismissed");
@@ -160,17 +164,17 @@ pub extern "C" fn rust_notification_auto_dismissed(uuid: *const c_char) {
 
 /// Called from ObjC main-thread RunLoop spin to check whether waiting should stop.
 #[unsafe(no_mangle)]
-pub extern "C" fn rust_notification_is_done(uuid: *const c_char) -> bool {
+pub extern "C" fn rust_notification_is_done(uuid: *const u8) -> bool {
     // On panic return `true` so the RunLoop spin terminates instead of looping forever.
     std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        let id = match unsafe { str_from_ptr(uuid) } {
-            Some(s) => s,
+        let id = match unsafe { uuid_from_ptr(uuid) } {
+            Some(b) => b,
             None => return true,
         };
         pending()
             .lock()
             .unwrap()
-            .get(id)
+            .get(&id)
             .map(|e| e.done.load(Ordering::Acquire))
             .unwrap_or(true)
     }))
@@ -179,11 +183,11 @@ pub extern "C" fn rust_notification_is_done(uuid: *const c_char) -> bool {
 
 /// Called from ObjC background threads to block until the notification completes.
 #[unsafe(no_mangle)]
-pub extern "C" fn rust_wait_for_notification(uuid: *const c_char) {
+pub extern "C" fn rust_wait_for_notification(uuid: *const u8) {
     // On panic: return immediately so the ObjC background thread isn't stuck forever.
     let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        let id = match unsafe { str_from_ptr(uuid) } {
-            Some(s) => s.to_owned(),
+        let id = match unsafe { uuid_from_ptr(uuid) } {
+            Some(b) => b,
             None => return,
         };
         let entry = match pending().lock().unwrap().get(&id).cloned() {
@@ -201,10 +205,10 @@ pub extern "C" fn rust_wait_for_notification(uuid: *const c_char) {
 /// `didDeliverNotification:`. Used by fire-and-forget sends to ensure the process stays
 /// alive until the notification actually reaches the notification daemon.
 #[unsafe(no_mangle)]
-pub extern "C" fn rust_notification_delivered(uuid: *const c_char) {
+pub extern "C" fn rust_notification_delivered(uuid: *const u8) {
     let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        let id = match unsafe { str_from_ptr(uuid) } {
-            Some(s) => s.to_owned(),
+        let id = match unsafe { uuid_from_ptr(uuid) } {
+            Some(b) => b,
             None => return,
         };
         if let Some(entry) = pending().lock().unwrap().get(&id).cloned() {
@@ -221,16 +225,16 @@ pub extern "C" fn rust_notification_delivered(uuid: *const c_char) {
 /// whether `didDeliverNotification:` has fired. Returns `true` on unknown uuid or
 /// panic so the spin terminates instead of looping forever.
 #[unsafe(no_mangle)]
-pub extern "C" fn rust_notification_is_delivered(uuid: *const c_char) -> bool {
+pub extern "C" fn rust_notification_is_delivered(uuid: *const u8) -> bool {
     std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        let id = match unsafe { str_from_ptr(uuid) } {
-            Some(s) => s,
+        let id = match unsafe { uuid_from_ptr(uuid) } {
+            Some(b) => b,
             None => return true,
         };
         pending()
             .lock()
             .unwrap()
-            .get(id)
+            .get(&id)
             .map(|e| e.delivered.load(Ordering::Acquire))
             .unwrap_or(true)
     }))
@@ -241,11 +245,11 @@ pub extern "C" fn rust_notification_is_delivered(uuid: *const c_char) -> bool {
 /// `didDeliverNotification:` fires, bounded by a 2-second safety timeout so the
 /// caller can't hang indefinitely if the callback never arrives.
 #[unsafe(no_mangle)]
-pub extern "C" fn rust_wait_for_delivery(uuid: *const c_char) {
+pub extern "C" fn rust_wait_for_delivery(uuid: *const u8) {
     // On panic: return immediately so the ObjC background thread isn't stuck forever.
     let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        let id = match unsafe { str_from_ptr(uuid) } {
-            Some(s) => s.to_owned(),
+        let id = match unsafe { uuid_from_ptr(uuid) } {
+            Some(b) => b,
             None => return,
         };
         let entry = match pending().lock().unwrap().get(&id).cloned() {
@@ -295,12 +299,10 @@ pub fn send_notification(
     let should_wait = options.map(|o| o.needs_response()).unwrap_or(false);
     let options_dict = options.unwrap_or(&Notification::new()).to_dictionary();
 
-    let counter = NOTIFICATION_COUNTER.fetch_add(1, Ordering::SeqCst);
-    let id = format!("{}-{}", process::id(), counter);
-    let c_id = CString::new(id.clone()).unwrap();
+    let id: [u8; 16] = uuid::Uuid::new_v4().into_bytes();
 
     pending().lock().unwrap().insert(
-        id.clone(),
+        id,
         Arc::new(PendingEntry {
             result: Mutex::new(NotificationResponse::None),
             done: AtomicBool::new(!should_wait),
@@ -309,7 +311,7 @@ pub fn send_notification(
         }),
     );
     // Cleaned up by drop even if ObjC or result-reading panics.
-    let _guard = PendingGuard { id: id.clone() };
+    let _guard = PendingGuard { id };
 
     unsafe {
         sys::sendNotification(
@@ -317,7 +319,7 @@ pub fn send_notification(
             NSString::from_str(subtitle.unwrap_or("")).deref(),
             NSString::from_str(message).deref(),
             options_dict.deref(),
-            c_id.as_ptr(),
+            id.as_ptr(),
             should_wait,
         );
     }
@@ -380,22 +382,21 @@ pub fn set_application(bundle_ident: &str) -> NotificationResult<()> {
 mod tests {
     use super::*;
     use std::ffi::CString;
-    use std::ptr;
 
     /// Insert a bare entry into PENDING so tests can drive callbacks directly.
-    fn insert_test_entry(id: &str) -> Arc<PendingEntry> {
+    fn insert_test_entry(id: [u8; 16]) -> Arc<PendingEntry> {
         let entry = Arc::new(PendingEntry {
             result: Mutex::new(NotificationResponse::None),
             done: AtomicBool::new(false),
             delivered: AtomicBool::new(false),
             condvar: Condvar::new(),
         });
-        pending().lock().unwrap().insert(id.to_owned(), Arc::clone(&entry));
+        pending().lock().unwrap().insert(id, Arc::clone(&entry));
         entry
     }
 
-    fn remove_entry(id: &str) -> Option<Arc<PendingEntry>> {
-        pending().lock().unwrap().remove(id)
+    fn remove_entry(id: [u8; 16]) -> Option<Arc<PendingEntry>> {
+        pending().lock().unwrap().remove(&id)
     }
 
     // --- needs_response truth table ---
@@ -441,16 +442,15 @@ mod tests {
 
     #[test]
     fn bridge_reply() {
-        let id = "s1-bridge-reply";
+        let id: [u8; 16] = [0x9a, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1];
         insert_test_entry(id);
 
-        let c_id = CString::new(id).unwrap();
         let act_type = CString::new("replied").unwrap();
         let value = CString::new("hello world").unwrap();
 
-        rust_notification_activated(c_id.as_ptr(), act_type.as_ptr(), value.as_ptr(), ptr::null());
+        rust_notification_activated(id.as_ptr(), act_type.as_ptr(), value.as_ptr(), std::ptr::null());
 
-        assert!(rust_notification_is_done(c_id.as_ptr()));
+        assert!(rust_notification_is_done(id.as_ptr()));
         let entry = remove_entry(id).unwrap();
         assert_eq!(
             *entry.result.lock().unwrap(),
@@ -460,16 +460,15 @@ mod tests {
 
     #[test]
     fn bridge_action_button() {
-        let id = "s1-bridge-action";
+        let id: [u8; 16] = [0x9b, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2];
         insert_test_entry(id);
 
-        let c_id = CString::new(id).unwrap();
         let act_type = CString::new("actionClicked").unwrap();
         let value = CString::new("Delete").unwrap();
 
-        rust_notification_activated(c_id.as_ptr(), act_type.as_ptr(), value.as_ptr(), ptr::null());
+        rust_notification_activated(id.as_ptr(), act_type.as_ptr(), value.as_ptr(), std::ptr::null());
 
-        assert!(rust_notification_is_done(c_id.as_ptr()));
+        assert!(rust_notification_is_done(id.as_ptr()));
         let entry = remove_entry(id).unwrap();
         assert_eq!(
             *entry.result.lock().unwrap(),
@@ -479,15 +478,14 @@ mod tests {
 
     #[test]
     fn bridge_close_button() {
-        let id = "s1-bridge-close";
+        let id: [u8; 16] = [0x9c, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3];
         insert_test_entry(id);
 
-        let c_id = CString::new(id).unwrap();
         let button = CString::new("Nevermind").unwrap();
 
-        rust_notification_dismissed(c_id.as_ptr(), button.as_ptr());
+        rust_notification_dismissed(id.as_ptr(), button.as_ptr());
 
-        assert!(rust_notification_is_done(c_id.as_ptr()));
+        assert!(rust_notification_is_done(id.as_ptr()));
         let entry = remove_entry(id).unwrap();
         assert_eq!(
             *entry.result.lock().unwrap(),
@@ -497,13 +495,12 @@ mod tests {
 
     #[test]
     fn bridge_auto_dismissed() {
-        let id = "s1-bridge-auto-dismissed";
+        let id: [u8; 16] = [0x9d, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4];
         insert_test_entry(id);
 
-        let c_id = CString::new(id).unwrap();
-        rust_notification_auto_dismissed(c_id.as_ptr());
+        rust_notification_auto_dismissed(id.as_ptr());
 
-        assert!(rust_notification_is_done(c_id.as_ptr()));
+        assert!(rust_notification_is_done(id.as_ptr()));
         let entry = remove_entry(id).unwrap();
         assert_eq!(*entry.result.lock().unwrap(), NotificationResponse::None);
     }
@@ -512,17 +509,16 @@ mod tests {
 
     #[test]
     fn first_wins_guard() {
-        let id = "s1-first-wins";
+        let id: [u8; 16] = [0x9e, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5];
         insert_test_entry(id);
 
-        let c_id = CString::new(id).unwrap();
         let act_type = CString::new("replied").unwrap();
         let first = CString::new("first").unwrap();
         let second = CString::new("second").unwrap();
 
-        rust_notification_activated(c_id.as_ptr(), act_type.as_ptr(), first.as_ptr(), ptr::null());
+        rust_notification_activated(id.as_ptr(), act_type.as_ptr(), first.as_ptr(), std::ptr::null());
         // Second call must be ignored because done=true after the first.
-        rust_notification_activated(c_id.as_ptr(), act_type.as_ptr(), second.as_ptr(), ptr::null());
+        rust_notification_activated(id.as_ptr(), act_type.as_ptr(), second.as_ptr(), std::ptr::null());
 
         let entry = remove_entry(id).unwrap();
         assert_eq!(
@@ -535,15 +531,14 @@ mod tests {
 
     #[test]
     fn bridge_delivered_fires_signal() {
-        let id = "s1-delivered";
+        let id: [u8; 16] = [0x9f, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6];
         let entry = insert_test_entry(id);
 
-        let c_id = CString::new(id).unwrap();
-        assert!(!rust_notification_is_delivered(c_id.as_ptr()));
+        assert!(!rust_notification_is_delivered(id.as_ptr()));
 
-        rust_notification_delivered(c_id.as_ptr());
+        rust_notification_delivered(id.as_ptr());
 
-        assert!(rust_notification_is_delivered(c_id.as_ptr()));
+        assert!(rust_notification_is_delivered(id.as_ptr()));
         assert!(entry.delivered.load(Ordering::Acquire));
         // done must NOT be set — delivered is orthogonal to the interaction/done flow.
         assert!(!entry.done.load(Ordering::Acquire));
@@ -553,13 +548,13 @@ mod tests {
 
     #[test]
     fn unknown_uuid_is_delivered_returns_true() {
-        let unknown = CString::new("unknown-delivered").unwrap();
+        let unknown: [u8; 16] = [0xff; 16];
         assert!(rust_notification_is_delivered(unknown.as_ptr()));
     }
 
     #[test]
     fn unknown_uuid_wait_for_delivery_returns_immediately() {
-        let unknown = CString::new("unknown-wait-delivery").unwrap();
+        let unknown: [u8; 16] = [0xfe; 16];
         rust_wait_for_delivery(unknown.as_ptr());
     }
 
@@ -567,18 +562,19 @@ mod tests {
 
     #[test]
     fn unknown_uuid_is_done_returns_true() {
-        let unknown = CString::new("unknown-done").unwrap();
+        let unknown: [u8; 16] = [0xfd; 16];
         assert!(rust_notification_is_done(unknown.as_ptr()));
     }
 
     #[test]
     fn unknown_uuid_complete_is_noop() {
-        complete_notification("unknown-noop", NotificationResponse::None);
+        let unknown: [u8; 16] = [0xfc; 16];
+        complete_notification(&unknown, NotificationResponse::None);
     }
 
     #[test]
     fn unknown_uuid_wait_returns_immediately() {
-        let unknown = CString::new("unknown-wait").unwrap();
+        let unknown: [u8; 16] = [0xfb; 16];
         rust_wait_for_notification(unknown.as_ptr());
     }
 }

@@ -7,19 +7,19 @@ NSString* fakeBundleIdentifier = nil;
 
 NSString* getBundleIdentifier(NSString* appName);
 BOOL setApplication(NSString* newbundleIdentifier);
-void sendNotification(NSString* title, NSString* subtitle, NSString* message, NSDictionary* options, const char* notificationId, BOOL shouldWait);
+void sendNotification(NSString* title, NSString* subtitle, NSString* message, NSDictionary* options, const unsigned char* notificationId, BOOL shouldWait);
 void ensureDelegateInitiated(void);
 
 // Rust callbacks — implemented in lib.rs, called from ObjC delegate
-extern void rust_notification_activated(const char* uuid, const char* activationType, const char* actionValue, const char* actionValueIndex);
-extern void rust_notification_dismissed(const char* uuid, const char* buttonTitle);
-extern void rust_notification_auto_dismissed(const char* uuid);
-extern BOOL rust_notification_is_done(const char* uuid);
-extern void rust_wait_for_notification(const char* uuid);
+extern void rust_notification_activated(const unsigned char* uuid, const char* activationType, const char* actionValue, const char* actionValueIndex);
+extern void rust_notification_dismissed(const unsigned char* uuid, const char* buttonTitle);
+extern void rust_notification_auto_dismissed(const unsigned char* uuid);
+extern BOOL rust_notification_is_done(const unsigned char* uuid);
+extern void rust_wait_for_notification(const unsigned char* uuid);
 // Delivery-confirmation callbacks (fire-and-forget path)
-extern void rust_notification_delivered(const char* uuid);
-extern BOOL rust_notification_is_delivered(const char* uuid);
-extern void rust_wait_for_delivery(const char* uuid);
+extern void rust_notification_delivered(const unsigned char* uuid);
+extern BOOL rust_notification_is_delivered(const unsigned char* uuid);
+extern void rust_wait_for_delivery(const unsigned char* uuid);
 
 @implementation NSBundle (swizzle)
 - (NSString*)__bundleIdentifier {

@@ -34,12 +34,21 @@ NSImage* getImageFromURL(NSString* url) {
     return [[NSImage alloc] initWithContentsOfURL:imageURL];
 }
 
+// Extracts the raw UUID bytes from a notification's identifier string.
+// NSUserNotification.identifier is an NSString (UUID canonical form); we reconstruct
+// the NSUUID and write 16 bytes into `out` so Rust callbacks receive plain bytes.
+static void uuidBytesFromNotification(NSUserNotification* n, unsigned char out[16]) {
+    NSUUID* uuid = [[NSUUID alloc] initWithUUIDString:n.identifier];
+    [uuid getUUIDBytes:out];
+    [uuid release];
+}
+
 // resolveAutoDismiss — called on the main thread when wasAutoDismissed() fires.
 // NSUserNotification has no auto-dismiss delegate callback; polling deliveredNotifications is the
 // only signal. We drain any already-queued delegate messages (didActivate / didDismissAlert) before
 // falling back to treating the disappearance as a silent auto-dismiss. This removes all timing
 // heuristics: if a real callback was queued, it fires during the runUntilDate: drain and wins.
-static void resolveAutoDismiss(const char* uuid) {
+static void resolveAutoDismiss(const unsigned char* uuid) {
     if (rust_notification_is_done(uuid)) return;   // a real callback already won
     // Drain delegate messages already queued on this run loop, then re-check.
     [[NSRunLoop currentRunLoop] runUntilDate:[NSDate date]];
@@ -47,20 +56,22 @@ static void resolveAutoDismiss(const char* uuid) {
     rust_notification_auto_dismissed(uuid);
 }
 
-// sendNotification — delivers or schedules a notification identified by notificationId (C string).
+// sendNotification — delivers or schedules a notification identified by notificationId (16 bytes).
 // shouldWait: if NO, returns immediately after delivery (fire-and-forget).
 // if YES, blocks until the user interacts or the notification is auto-dismissed.
 // Result is communicated back to Rust via rust_notification_activated / rust_notification_dismissed /
 // rust_notification_auto_dismissed callbacks.
-void sendNotification(NSString* title, NSString* subtitle, NSString* message, NSDictionary* options, const char* notificationId, BOOL shouldWait) {
+void sendNotification(NSString* title, NSString* subtitle, NSString* message, NSDictionary* options, const unsigned char* notificationId, BOOL shouldWait) {
     @autoreleasepool {
         NSUserNotificationCenter* notificationCenter = [NSUserNotificationCenter defaultUserNotificationCenter];
 
         NSUserNotification* userNotification = [[NSUserNotification alloc] init];
         BOOL isScheduled = NO;
 
-        NSString* identifierString = [NSString stringWithUTF8String:notificationId];
+        NSUUID* uuid = [[NSUUID alloc] initWithUUIDBytes:notificationId];
+        NSString* identifierString = [uuid UUIDString];
         userNotification.identifier = identifierString;
+        [uuid release];
 
         // Basic text
         userNotification.title = title;
@@ -200,12 +211,15 @@ void sendNotification(NSString* title, NSString* subtitle, NSString* message, NS
 
 - (void)userNotificationCenter:(NSUserNotificationCenter*)center
         didDeliverNotification:(NSUserNotification*)notification {
-    rust_notification_delivered([notification.identifier UTF8String]);
+    unsigned char bytes[16];
+    uuidBytesFromNotification(notification, bytes);
+    rust_notification_delivered(bytes);
 }
 
 - (void)userNotificationCenter:(NSUserNotificationCenter*)center
        didActivateNotification:(NSUserNotification*)notification {
-    const char* uuid = [notification.identifier UTF8String];
+    unsigned char bytes[16];
+    uuidBytesFromNotification(notification, bytes);
 
     const char* activationType = "none";
     const char* actionValue = NULL;
@@ -242,16 +256,15 @@ void sendNotification(NSString* title, NSString* subtitle, NSString* message, NS
             break;
     }
 
-    rust_notification_activated(uuid, activationType, actionValue, actionValueIndex);
+    rust_notification_activated(bytes, activationType, actionValue, actionValueIndex);
     [center removeDeliveredNotification:notification];
 }
 
 - (void)userNotificationCenter:(NSUserNotificationCenter*)center
                didDismissAlert:(NSUserNotification*)notification {
-    rust_notification_dismissed(
-        [notification.identifier UTF8String],
-        [notification.otherButtonTitle UTF8String]
-    );
+    unsigned char bytes[16];
+    uuidBytesFromNotification(notification, bytes);
+    rust_notification_dismissed(bytes, [notification.otherButtonTitle UTF8String]);
     [center removeDeliveredNotification:notification];
 }
 
