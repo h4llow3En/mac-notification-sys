@@ -46,7 +46,7 @@ mod sys {
         );
         pub fn setApplication(newbundleIdentifier: *const NSString) -> bool;
         pub fn getBundleIdentifier(appName: *const NSString) -> *const NSString;
-        pub fn ensureDelegateInitiated();
+        pub fn setupDelegate();
     }
 }
 
@@ -140,7 +140,7 @@ fn ensure_application_set() -> NotificationResult<()> {
 fn ensure_delegate_initiated() {
     // `sharedDelegate` in ObjC is already guarded by `dispatch_once`; calling it here
     // is idempotent and thread-safe without an extra Rust-side Once.
-    unsafe { sys::ensureDelegateInitiated() };
+    unsafe { sys::setupDelegate() };
 }
 
 /// Set the application which delivers or schedules a notification

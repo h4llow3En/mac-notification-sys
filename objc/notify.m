@@ -292,6 +292,6 @@ void sendNotification(NSString* title, NSString* subtitle, NSString* message, NS
 }
 @end
 
-void ensureDelegateInitiated(void) {
+void setupDelegate(void) {
     [NotificationCenterDelegate sharedDelegate];
 }
