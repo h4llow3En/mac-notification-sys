@@ -7,7 +7,21 @@ NSString* fakeBundleIdentifier = nil;
 
 NSString* getBundleIdentifier(NSString* appName);
 BOOL setApplication(NSString* newbundleIdentifier);
-NSDictionary* sendNotification(NSString* title, NSString* subtitle, NSString* message, NSDictionary* options);
+void sendNotification(NSString* title, NSString* subtitle, NSString* message, NSDictionary* options, const unsigned char* notificationId, BOOL shouldWait);
+void setupDelegate(void);
+
+// Rust callbacks — implemented in lib.rs, called from ObjC delegate
+// activationType: 0=none, 1=actionClicked, 2=contentsClicked, 3=replied
+// actionValueIndex: selected dropdown index, or -1 if not applicable
+extern void rust_notification_activated(const unsigned char* uuid, uint8_t activationType, const char* actionValue, int64_t actionValueIndex);
+extern void rust_notification_dismissed(const unsigned char* uuid, const char* buttonTitle);
+extern void rust_notification_auto_dismissed(const unsigned char* uuid);
+extern BOOL rust_notification_is_done(const unsigned char* uuid);
+extern void rust_wait_for_notification(const unsigned char* uuid);
+// Delivery-confirmation callbacks (fire-and-forget path)
+extern void rust_notification_delivered(const unsigned char* uuid);
+extern BOOL rust_notification_is_delivered(const unsigned char* uuid);
+extern void rust_wait_for_delivery(const unsigned char* uuid);
 
 @implementation NSBundle (swizzle)
 - (NSString*)__bundleIdentifier {
@@ -20,109 +34,15 @@ NSDictionary* sendNotification(NSString* title, NSString* subtitle, NSString* me
 @end
 
 BOOL installNSBundleHook(void) {
-    Class class = objc_getClass("NSBundle");
-    if (class) {
-        method_exchangeImplementations(class_getInstanceMethod(class, @selector(bundleIdentifier)),
-                                       class_getInstanceMethod(class, @selector(__bundleIdentifier)));
+    Class cls = objc_getClass("NSBundle");
+    if (cls) {
+        method_exchangeImplementations(class_getInstanceMethod(cls, @selector(bundleIdentifier)),
+                                       class_getInstanceMethod(cls, @selector(__bundleIdentifier)));
         return YES;
     }
     return NO;
 }
 
 @interface NotificationCenterDelegate: NSObject <NSUserNotificationCenterDelegate>
-@property(nonatomic, assign) BOOL keepRunning;
-@property(nonatomic, assign) BOOL waitForClick;
-@property(nonatomic, assign) BOOL waitForClose;
-@property(nonatomic, retain) NSDictionary* actionData;
-// background threads wait on this instead of spinning the run loop (#86)
-@property(nonatomic, strong) dispatch_semaphore_t doneSemaphore;
++ (instancetype)sharedDelegate;
 @end
-
-// Delegate to respond to events in the NSUserNotificationCenter
-// See https://developer.apple.com/documentation/foundation/nsusernotificationcenterdelegate?language=objc
-@implementation NotificationCenterDelegate
-- (void)userNotificationCenter:(NSUserNotificationCenter*)center
-        didDeliverNotification:(NSUserNotification*)notification {
-    // Stop running if we're not expecting a response
-    if (!notification.hasActionButton && !notification.hasReplyButton && !self.waitForClick && !self.waitForClose) {
-        self.keepRunning = NO;
-        dispatch_semaphore_signal(self.doneSemaphore);
-    }
-}
-
-// Most typical actions
-- (void)userNotificationCenter:(NSUserNotificationCenter*)center
-       didActivateNotification:(NSUserNotification*)notification {
-    long long additionalActionIndex = ULONG_MAX;
-
-    // Switch on how the notification was interacted with
-    // See https://developer.apple.com/documentation/foundation/nsusernotification/1416143-activationtype?language=objc
-    switch (notification.activationType) {
-        case NSUserNotificationActivationTypeActionButtonClicked:
-        case NSUserNotificationActivationTypeAdditionalActionClicked: {
-            if ([[(NSObject*)notification valueForKey:@"_alternateActionButtonTitles"] count] > 1) {
-                NSNumber* alternateActionIndex = [(NSObject*)notification valueForKey:@"_alternateActionIndex"];
-                additionalActionIndex = [alternateActionIndex unsignedLongLongValue];
-
-                if (additionalActionIndex == LONG_MAX) {
-                    self.actionData = @{@"activationType": @"actionClicked", @"activationValue": notification.actionButtonTitle};
-                    break;
-                }
-
-                NSString* ActionsClicked = [(NSObject*)notification valueForKey:@"_alternateActionButtonTitles"][additionalActionIndex];
-
-                self.actionData = @{@"activationType": @"actionClicked", @"activationValue": ActionsClicked, @"activationValueIndex": [NSString stringWithFormat:@"%llu", additionalActionIndex]};
-            } else {
-                self.actionData = @{@"activationType": @"actionClicked", @"activationValue": notification.actionButtonTitle};
-            }
-            break;
-        }
-
-        case NSUserNotificationActivationTypeContentsClicked: {
-            self.actionData = @{@"activationType": @"contentsClicked"};
-            break;
-        }
-
-        case NSUserNotificationActivationTypeReplied: {
-            self.actionData = @{@"activationType": @"replied", @"activationValue": notification.response.string};
-            break;
-        }
-        case NSUserNotificationActivationTypeNone:
-        default: {
-            self.actionData = @{@"activationType": @"none"};
-            break;
-        }
-    }
-
-    // Stop running after interacting with the notification
-    self.keepRunning = NO;
-
-    // Force-close the notification after interacting with it
-    dispatch_semaphore_signal(self.doneSemaphore);
-    [center removeDeliveredNotification:notification];
-}
-
-// Specific to the close/other button
-- (void)userNotificationCenter:(NSUserNotificationCenter*)center
-               didDismissAlert:(NSUserNotification*)notification {
-    self.actionData = @{@"activationType": @"closeClicked", @"activationValue": notification.otherButtonTitle};
-
-    // Stop running after interacting with the notification
-    self.keepRunning = NO;
-
-    dispatch_semaphore_signal(self.doneSemaphore);
-
-    // Force-close the notification after interacting with it
-    [center removeDeliveredNotification:notification];
-}
-@end
-
-// handles both file:// and bare paths
-NSImage* getImageFromURL(NSString* url) {
-    NSURL* imageURL = [NSURL URLWithString:url];
-    if ([[imageURL scheme] length] == 0) {
-        // Prefix 'file://' if no scheme
-        imageURL = [NSURL fileURLWithPath:url];
-    }
-    return [[NSImage alloc] initWithContentsOfURL:imageURL];
-}

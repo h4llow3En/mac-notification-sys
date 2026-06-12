@@ -1,28 +1,26 @@
 use mac_notification_sys::*;
 
 fn main() {
+    env_logger::init();
     let bundle = get_bundle_identifier_or_default("safari");
     println!("{}", bundle);
 
     set_application(&bundle).unwrap();
 
     let response = send_notification(
-        "main button with drop down",
+        "take response",
         None,
-        "choose wisely",
-        Some(Notification::new().main_button(MainButton::DropdownActions(
-            "Dropdown",
-            &["Action 1", "Action 2"],
-        ))),
+        "type what you want",
+        Some(Notification::new().main_button(MainButton::Response(r#"you want "foobar""#))),
     )
     .unwrap();
     handle_repsonse(response);
 
     let response = send_notification(
-        "take response",
+        "close button only",
         None,
-        "type what you want",
-        Some(Notification::new().main_button(MainButton::Response(r#"you want "foobar""#))),
+        "close it well",
+        Some(Notification::new().close_button("Nevermind...")),
     )
     .unwrap();
     handle_repsonse(response);
@@ -37,10 +35,13 @@ fn main() {
     handle_repsonse(response);
 
     let response = send_notification(
-        "close button only",
+        "main button with drop down",
         None,
-        "close it well",
-        Some(Notification::new().close_button("Nevermind...")),
+        "choose wisely",
+        Some(Notification::new().main_button(MainButton::DropdownActions(
+            "Dropdown",
+            &["Action 1", "Action 2"],
+        ))),
     )
     .unwrap();
     handle_repsonse(response);

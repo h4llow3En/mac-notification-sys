@@ -3,7 +3,7 @@ use mac_notification_sys::*;
 fn main() {
     let stamp = time::OffsetDateTime::now_utc().unix_timestamp() as f64 + 5.;
     println!("{:?}", stamp);
-    let bundle = get_bundle_identifier_or_default("firefox");
+    let bundle = get_bundle_identifier_or_default("safari");
     set_application(&bundle).unwrap();
     send_notification(
         "Danger",

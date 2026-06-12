@@ -14,20 +14,25 @@
 )]
 #![cfg(target_os = "macos")]
 #![allow(improper_ctypes)]
-
-pub mod error;
-mod notification;
+// The extern "C" callbacks called from ObjC unavoidably take raw pointer arguments.
+// They cannot be marked `unsafe` (Rust forbids unsafe extern "C" fn that are exported),
+// yet they must dereference those pointers — suppress the lint crate-wide for this pattern.
+#![allow(clippy::not_unsafe_ptr_arg_deref)]
 
 use error::{ApplicationError, NotificationError, NotificationResult};
 pub use notification::{MainButton, Notification, NotificationResponse, Sound};
 use objc2_foundation::NSString;
-use std::ops::Deref;
-use std::sync::Once;
+use std::{
+    ops::Deref,
+    sync::{Arc, Condvar, Mutex, Once, atomic::AtomicBool},
+};
 
-static INIT_APPLICATION_SET: Once = Once::new();
+mod bridge;
+pub mod error;
+mod notification;
+mod pending_guard;
 
 mod sys {
-    use objc2::rc::Retained;
     use objc2_foundation::{NSDictionary, NSString};
     #[link(name = "notify")]
     unsafe extern "C" {
@@ -36,11 +41,16 @@ mod sys {
             subtitle: *const NSString,
             message: *const NSString,
             options: *const NSDictionary<NSString, NSString>,
-        ) -> Retained<NSDictionary<NSString, NSString>>;
+            notification_id: *const u8,
+            should_wait: bool,
+        );
         pub fn setApplication(newbundleIdentifier: *const NSString) -> bool;
         pub fn getBundleIdentifier(appName: *const NSString) -> *const NSString;
+        pub fn setupDelegate();
     }
 }
+
+static INIT_APPLICATION_SET: Once = Once::new();
 
 /// Delivers a new notification
 ///
@@ -53,7 +63,6 @@ mod sys {
 /// // deliver a silent notification
 /// let _ = send_notification("Title", None, "This is the body", None).unwrap();
 /// ```
-// #[deprecated(note="use `Notification::send`")]
 pub fn send_notification(
     title: &str,
     subtitle: Option<&str>,
@@ -69,28 +78,42 @@ pub fn send_notification(
         }
     };
 
-    let options = options.unwrap_or(&Notification::new()).to_dictionary();
-
     ensure_application_set()?;
+    ensure_delegate_initiated();
 
-    let dictionary_response = unsafe {
+    let should_wait = options.map(|o| o.needs_response()).unwrap_or(false);
+    let options_dict = options.unwrap_or(&Notification::new()).to_dictionary();
+
+    let id: [u8; 16] = uuid::Uuid::new_v4().into_bytes();
+
+    let entry = Arc::new(pending_guard::PendingEntry {
+        result: Mutex::new(NotificationResponse::None),
+        done: AtomicBool::new(!should_wait),
+        condvar: Condvar::new(),
+        delivered: Mutex::new(false),
+        delivered_cv: Condvar::new(),
+    });
+    pending_guard::pending()
+        .lock()
+        .unwrap()
+        .insert(id, Arc::clone(&entry));
+    // PendingGuard performs the sole remove — both on the normal path and on panic.
+    // Reading the result from `entry` directly avoids a second remove call.
+    let _guard = pending_guard::PendingGuard { id };
+
+    unsafe {
         sys::sendNotification(
             NSString::from_str(title).deref(),
             NSString::from_str(subtitle.unwrap_or("")).deref(),
             NSString::from_str(message).deref(),
-            options.deref(),
-        )
-    };
-    ensure!(
-        dictionary_response
-            .objectForKey(NSString::from_str("error").deref())
-            .is_none(),
-        NotificationError::UnableToDeliver
-    );
+            options_dict.deref(),
+            id.as_ptr(),
+            should_wait,
+        );
+    }
 
-    let response = NotificationResponse::from_dictionary(dictionary_response);
-
-    Ok(response)
+    let result = entry.result.lock().unwrap().clone();
+    Ok(result)
 }
 
 /// Search for a possible BundleIdentifier of a given appname.
@@ -101,11 +124,8 @@ pub fn get_bundle_identifier_or_default(app_name: &str) -> String {
 
 /// Search for a BundleIdentifier of an given appname.
 pub fn get_bundle_identifier(app_name: &str) -> Option<String> {
-    unsafe {
-        sys::getBundleIdentifier(NSString::from_str(app_name).deref()) // *const NSString
-            .as_ref()
-    }
-    .map(NSString::to_string)
+    unsafe { sys::getBundleIdentifier(NSString::from_str(app_name).deref()).as_ref() }
+        .map(NSString::to_string)
 }
 
 /// Sets the application if not already set
@@ -115,6 +135,12 @@ fn ensure_application_set() -> NotificationResult<()> {
     };
     let bundle = get_bundle_identifier_or_default("use_default");
     set_application(&bundle)
+}
+
+fn ensure_delegate_initiated() {
+    // `sharedDelegate` in ObjC is already guarded by `dispatch_once`; calling it here
+    // is idempotent and thread-safe without an extra Rust-side Once.
+    unsafe { sys::setupDelegate() };
 }
 
 /// Set the application which delivers or schedules a notification
