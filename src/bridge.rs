@@ -24,11 +24,14 @@ fn complete_notification(id: &[u8; 16], response: NotificationResponse) {
         // Without this, two concurrent callers could both observe done=false,
         // both enter the block, and the second would overwrite the first's result.
         let mut result = entry.result.lock().unwrap();
+        log::trace!("complete_notification: id: ..., response: {response:?}");
         if !entry.done.load(Ordering::Acquire) {
             *result = response;
             entry.done.store(true, Ordering::Release);
             entry.condvar.notify_all();
         }
+    } else {
+        log::debug!("complete_notification: no entry for id: {id:?}");
     }
 }
 
