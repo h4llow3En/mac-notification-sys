@@ -1,5 +1,14 @@
 # Changelog
 
+### [v0.6.14](https://github.com/h4llow3En/mac-notification-sys/compare/v0.6.13...v0.6.14) (2026-06-13)
+
+#### Features
+
+* add parallel notifications example
+([d1ce5c6](https://github.com/h4llow3En/mac-notification-sys/commit/d1ce5c6eeb2973e78f19d8326657af27ae93ac79))
+* support multiple concurrent notifications
+([a7e56cc](https://github.com/h4llow3En/mac-notification-sys/commit/a7e56cc7480dbefb7f63d8c0507abf0a1cd42bd4))
+
 ### [v0.6.13](https://github.com/h4llow3En/mac-notification-sys/compare/v0.6.12...v0.6.13) (2026-06-06)
 
 #### Fixes
