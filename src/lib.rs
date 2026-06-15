@@ -47,6 +47,7 @@ mod sys {
         pub fn setApplication(newbundleIdentifier: *const NSString) -> bool;
         pub fn getBundleIdentifier(appName: *const NSString) -> *const NSString;
         pub fn setupDelegate();
+        pub fn showWhenFrontmost(value: bool);
     }
 }
 
@@ -155,4 +156,15 @@ pub fn set_application(bundle_ident: &str) -> NotificationResult<()> {
         };
     });
     result
+}
+
+/// Show notifications even when our app is frontmost (spoofed bundle ID).
+///
+/// By default `NSUserNotificationCenter` hides notifications for foreground apps
+/// (still *delivered* to `deliveredNotifications` though). Set to `true` to override.
+///
+/// Mainly for CLI tools and libraries spoofing another bundle ID (e.g. Safari)
+/// and getting misidentified as frontmost. Controls *presentation* only, not *delivery*.
+pub fn present_when_frontmost(present: bool) {
+    unsafe { sys::showWhenFrontmost(present) };
 }
