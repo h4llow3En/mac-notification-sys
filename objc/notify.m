@@ -15,7 +15,9 @@ BOOL setApplication(NSString* newbundleIdentifier) {
         if (!installNSBundleHook()) {
             return NO;
         }
-        if (LSCopyApplicationURLsForBundleIdentifier((__bridge CFStringRef)newbundleIdentifier, NULL) != NULL) {
+        CFArrayRef apps = LSCopyApplicationURLsForBundleIdentifier((__bridge CFStringRef)newbundleIdentifier, NULL);
+        if (apps != NULL) {
+            CFRelease(apps);
             fakeBundleIdentifier = newbundleIdentifier;
             return YES;
         }
