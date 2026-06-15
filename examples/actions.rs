@@ -40,7 +40,7 @@ fn main() {
         "choose wisely",
         Some(Notification::new().main_button(MainButton::DropdownActions(
             "Dropdown",
-            &["Action 1", "Action 2"],
+            &["🔴 Red Pill", "🔵 Blue Pill"],
         ))),
     )
     .unwrap();
