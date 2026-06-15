@@ -186,24 +186,39 @@ void sendNotification(NSString* title, NSString* subtitle, NSString* message, NS
         };
 
         if ([NSThread isMainThread]) {
-            // Spin the run loop so delegate callbacks are delivered on this thread.
-            // rust_notification_is_done returns true once a callback has signaled completion.
+            // wait for delivery before checking dismissal. the async delivery window
+            // would otherwise look like an immediate dismiss. timeout after 2s so we don't hang
+            NSDate* deliveryDeadline = [NSDate dateWithTimeIntervalSinceNow:2.0];
+            while (!rust_notification_is_delivered(notificationId) && !rust_notification_is_done(notificationId) &&
+                   [deliveryDeadline timeIntervalSinceNow] > 0) {
+                [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.05]];
+            }
+            // delivery timed out without confirmation -> treat as auto-dismiss
+            if (!rust_notification_is_done(notificationId) && !rust_notification_is_delivered(notificationId))
+                resolveAutoDismiss(notificationId);
+
+            // keep the run loop spinning; callbacks arrive here and signal when done
             while (!rust_notification_is_done(notificationId)) {
                 [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.1]];
                 if (wasAutoDismissed())
                     resolveAutoDismiss(notificationId);
             }
         } else {
-            // Callbacks come in on the main thread; start a dismiss-poll timer there and
-            // block this thread in Rust until a callback signals completion (#86).
-            // Copy the 16 UUID bytes into NSData so the block owns them for its lifetime.
-            // notificationId points to a Rust stack local that is freed once
-            // rust_wait_for_notification returns and send_notification unwinds — the raw
-            // pointer must not be used after that point.
+            // callbacks come in on main thread, start poll timer there (#86)
+            // copy UUID to NSData so the block owns the lifetime, not the Rust stack
             NSData* notificationIdData = [NSData dataWithBytes:notificationId length:16];
+            NSDate* pollStarted = [NSDate date];
             NSTimer* dismissPoll = [NSTimer timerWithTimeInterval:0.5
                                                           repeats:YES
                                                             block:^(NSTimer* t) {
+                                                              // wait for delivery before checking dismiss, same logic as main thread
+                                                              if (!rust_notification_is_delivered(notificationIdData.bytes)) {
+                                                                  if (!rust_notification_is_done(notificationIdData.bytes) && -[pollStarted timeIntervalSinceNow] > 2.0) {
+                                                                      [t invalidate];
+                                                                      resolveAutoDismiss(notificationIdData.bytes);
+                                                                  }
+                                                                  return;
+                                                              }
                                                               if (wasAutoDismissed()) {
                                                                   [t invalidate];
                                                                   resolveAutoDismiss(notificationIdData.bytes);
