@@ -15,10 +15,8 @@ BOOL setApplication(NSString* newbundleIdentifier) {
         if (!installNSBundleHook()) {
             return NO;
         }
-        if (LSCopyApplicationURLsForBundleIdentifier((CFStringRef)newbundleIdentifier, NULL) != NULL) {
-            [fakeBundleIdentifier release];
+        if (LSCopyApplicationURLsForBundleIdentifier((__bridge CFStringRef)newbundleIdentifier, NULL) != NULL) {
             fakeBundleIdentifier = newbundleIdentifier;
-            [newbundleIdentifier retain];
             return YES;
         }
         return NO;
@@ -44,7 +42,6 @@ static void uuidBytesFromNotification(NSUserNotification* n, unsigned char out[1
     NSUUID* uuid = n.identifier ? [[NSUUID alloc] initWithUUIDString:n.identifier] : nil;
     if (uuid) {
         [uuid getUUIDBytes:out];
-        [uuid release];
     } else {
         memset(out, 0, 16);
     }
@@ -80,7 +77,6 @@ void sendNotification(NSString* title, NSString* subtitle, NSString* message, NS
         NSUUID* uuid = [[NSUUID alloc] initWithUUIDBytes:notificationId];
         NSString* identifierString = [uuid UUIDString];
         userNotification.identifier = identifierString;
-        [uuid release];
 
         // Basic text
         userNotification.title = title;
