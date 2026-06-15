@@ -200,7 +200,7 @@ void sendNotification(NSString* title, NSString* subtitle, NSString* message, NS
             // keep the run loop spinning; callbacks arrive here and signal when done
             while (!rust_notification_is_done(notificationId)) {
                 [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.1]];
-                if (wasAutoDismissed())
+                if (rust_notification_is_delivered(notificationId) && wasAutoDismissed())
                     resolveAutoDismiss(notificationId);
             }
         } else {
