@@ -9,6 +9,7 @@ NSString* getBundleIdentifier(NSString* appName);
 BOOL setApplication(NSString* newbundleIdentifier);
 void sendNotification(NSString* title, NSString* subtitle, NSString* message, NSDictionary* options, const unsigned char* notificationId, BOOL shouldWait);
 void setupDelegate(void);
+void showWhenFrontmost(BOOL value);
 
 // Rust callbacks — implemented in lib.rs, called from ObjC delegate
 // activationType: 0=none, 1=actionClicked, 2=contentsClicked, 3=replied

@@ -69,8 +69,14 @@ static void resolveAutoDismiss(const unsigned char* uuid) {
     rust_notification_auto_dismissed(uuid);
 }
 
-// sendNotification — delivers or schedules a notification identified by notificationId (16 bytes).
-// shouldWait: if NO, returns immediately after delivery (fire-and-forget).
+// whether shouldPresentNotification: returns YES (set from Rust before sending)
+static volatile BOOL presentWhenFrontmost = NO;
+
+void showWhenFrontmost(BOOL value) {
+    presentWhenFrontmost = value;
+}
+
+// shouldWait: NO = fire-and-forget, return immediately after delivery
 // if YES, blocks until the user interacts or the notification is auto-dismissed.
 // Result is communicated back to Rust via rust_notification_activated / rust_notification_dismissed /
 // rust_notification_auto_dismissed callbacks.
@@ -240,6 +246,12 @@ void sendNotification(NSString* title, NSString* subtitle, NSString* message, NS
 }
 
 @implementation NotificationCenterDelegate
+
+// force show even when our app is frontmost, otherwise it never enters deliveredNotifications
+- (BOOL)userNotificationCenter:(NSUserNotificationCenter*)center
+     shouldPresentNotification:(NSUserNotification*)notification {
+    return presentWhenFrontmost;
+}
 
 - (void)userNotificationCenter:(NSUserNotificationCenter*)center
         didDeliverNotification:(NSUserNotification*)notification {
