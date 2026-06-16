@@ -1,5 +1,12 @@
 # Changelog
 
+### [v0.6.15](https://github.com/h4llow3En/mac-notification-sys/compare/v0.6.14...v0.6.15) (2026-06-16)
+
+#### Fixes
+
+* notifications dismissing immediately instead of waiting for input
+([a58538f](https://github.com/h4llow3En/mac-notification-sys/commit/a58538fb25eb0aa0c12229080d9a9341c173cc9f))
+
 ### [v0.6.14](https://github.com/h4llow3En/mac-notification-sys/compare/v0.6.13...v0.6.14) (2026-06-13)
 
 #### Features
