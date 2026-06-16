@@ -2,6 +2,10 @@ use std::{ffi::CStr, os::raw::c_char, sync::atomic::Ordering};
 
 use crate::{NotificationResponse, pending_guard::pending};
 
+/// Seconds to wait for async XPC delivery confirmation before giving up.
+/// Matched by `kDeliveryTimeoutSecs` in notify.m.
+const DELIVERY_TIMEOUT_SECS: u64 = 2;
+
 unsafe fn str_from_ptr<'a>(ptr: *const c_char) -> Option<&'a str> {
     if ptr.is_null() {
         return None;
@@ -189,7 +193,7 @@ pub extern "C" fn rust_wait_for_delivery(uuid: *const u8) {
         let guard = entry.delivered.lock().unwrap();
         let _ = entry.delivered_cv.wait_timeout_while(
             guard,
-            std::time::Duration::from_secs(2),
+            std::time::Duration::from_secs(DELIVERY_TIMEOUT_SECS),
             |delivered| !*delivered,
         );
     }));

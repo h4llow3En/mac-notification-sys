@@ -1,5 +1,9 @@
 #import "notify.h"
 
+// Seconds to wait for async XPC delivery confirmation before giving up.
+// Matched by DELIVERY_TIMEOUT_SECS in bridge.rs.
+static const NSTimeInterval kDeliveryTimeoutSecs = 2.0;
+
 // getBundleIdentifier(app_name: &str) -> "com.apple.Terminal"
 NSString* getBundleIdentifier(NSString* appName) {
     NSString* findString = [NSString stringWithFormat:@"get id of application \"%@\"", appName];
@@ -162,7 +166,7 @@ void sendNotification(NSString* title, NSString* subtitle, NSString* message, NS
             // we never hang if the callback is never delivered.
             if (!isScheduled) {
                 if ([NSThread isMainThread]) {
-                    NSDate* deadline = [NSDate dateWithTimeIntervalSinceNow:2.0];
+                    NSDate* deadline = [NSDate dateWithTimeIntervalSinceNow:kDeliveryTimeoutSecs];
                     while (!rust_notification_is_delivered(notificationId) &&
                            [deadline timeIntervalSinceNow] > 0) {
                         [[NSRunLoop currentRunLoop]
@@ -188,7 +192,7 @@ void sendNotification(NSString* title, NSString* subtitle, NSString* message, NS
         if ([NSThread isMainThread]) {
             // wait for delivery before checking dismissal. the async delivery window
             // would otherwise look like an immediate dismiss. timeout after 2s so we don't hang
-            NSDate* deliveryDeadline = [NSDate dateWithTimeIntervalSinceNow:2.0];
+            NSDate* deliveryDeadline = [NSDate dateWithTimeIntervalSinceNow:kDeliveryTimeoutSecs];
             while (!rust_notification_is_delivered(notificationId) && !rust_notification_is_done(notificationId) &&
                    [deliveryDeadline timeIntervalSinceNow] > 0) {
                 [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.05]];
@@ -213,7 +217,7 @@ void sendNotification(NSString* title, NSString* subtitle, NSString* message, NS
                                                             block:^(NSTimer* t) {
                                                               // wait for delivery before checking dismiss, same logic as main thread
                                                               if (!rust_notification_is_delivered(notificationIdData.bytes)) {
-                                                                  if (!rust_notification_is_done(notificationIdData.bytes) && -[pollStarted timeIntervalSinceNow] > 2.0) {
+                                                                  if (!rust_notification_is_done(notificationIdData.bytes) && -[pollStarted timeIntervalSinceNow] > kDeliveryTimeoutSecs) {
                                                                       [t invalidate];
                                                                       resolveAutoDismiss(notificationIdData.bytes);
                                                                   }
