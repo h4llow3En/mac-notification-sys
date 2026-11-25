@@ -69,6 +69,62 @@ static void resolveAutoDismiss(const unsigned char* uuid) {
     rust_notification_auto_dismissed(uuid);
 }
 
+// One shared poll for every waiting notification instead of a timer each: deliveredNotifications is a
+// synchronous XPC call, so per-notification timers made idle CPU grow with the number of uncleared
+// notifications. Both globals are touched on the main thread only.
+static NSMutableDictionary* gPendingDismiss = nil; // identifier -> @[uuid NSData, sent NSDate]
+static NSTimer* gDismissPoll = nil;
+
+static void pollPendingDismiss(void) {
+    if (gPendingDismiss.count == 0) {
+        [gDismissPoll invalidate];
+        gDismissPoll = nil;
+        return;
+    }
+    NSArray* deliveredIds = [[NSUserNotificationCenter defaultUserNotificationCenter].deliveredNotifications valueForKey:@"identifier"];
+    NSSet* delivered = [NSSet setWithArray:deliveredIds];
+    // Decide every entry against this one snapshot before resolving any: resolveAutoDismiss drains the
+    // run loop, and a delivery callback handled there would look like a dismissal against the old snapshot.
+    NSMutableArray* gone = [NSMutableArray array];
+    for (NSString* identifier in gPendingDismiss) {
+        NSArray* entry = gPendingDismiss[identifier];
+        const unsigned char* uuid = ((NSData*)entry[0]).bytes;
+        if (!rust_notification_is_delivered(uuid)) {
+            // wait for delivery before checking dismiss; give up after the delivery timeout
+            if (rust_notification_is_done(uuid) || -[(NSDate*)entry[1] timeIntervalSinceNow] <= kDeliveryTimeoutSecs)
+                continue;
+        } else if ([delivered containsObject:identifier]) {
+            continue;
+        }
+        [gone addObject:identifier];
+    }
+    for (NSString* identifier in gone) {
+        NSArray* entry = [[gPendingDismiss[identifier] retain] autorelease]; // keep uuid bytes past removal
+        if (!entry)
+            continue; // its wait finished during an earlier drain
+        [gPendingDismiss removeObjectForKey:identifier];
+        resolveAutoDismiss(((NSData*)entry[0]).bytes);
+    }
+}
+
+static void watchDismiss(NSString* identifier, NSData* uuid) {
+    NSArray* entry = [NSArray arrayWithObjects:uuid, [NSDate date], nil];
+    dispatch_async(dispatch_get_main_queue(), ^{
+      if (!gPendingDismiss)
+          gPendingDismiss = [[NSMutableDictionary alloc] init];
+      gPendingDismiss[identifier] = entry;
+      if (!gDismissPoll) {
+          gDismissPoll = [NSTimer timerWithTimeInterval:0.5
+                                                repeats:YES
+                                                  block:^(NSTimer* __unused t) {
+                                                    pollPendingDismiss();
+                                                  }];
+          gDismissPoll.tolerance = 0.1; // let the OS coalesce wakeups (Apple energy guide: >= 10% of interval)
+          [[NSRunLoop mainRunLoop] addTimer:gDismissPoll forMode:NSDefaultRunLoopMode];
+      }
+    });
+}
+
 // sendNotification — delivers or schedules a notification identified by notificationId (16 bytes).
 // shouldWait: if NO, returns immediately after delivery (fire-and-forget).
 // if YES, blocks until the user interacts or the notification is auto-dismissed.
@@ -208,32 +264,15 @@ void sendNotification(NSString* title, NSString* subtitle, NSString* message, NS
                     resolveAutoDismiss(notificationId);
             }
         } else {
-            // callbacks come in on main thread, start poll timer there (#86)
-            // copy UUID to NSData so the block owns the lifetime, not the Rust stack
-            NSData* notificationIdData = [NSData dataWithBytes:notificationId length:16];
-            NSDate* pollStarted = [NSDate date];
-            NSTimer* dismissPoll = [NSTimer timerWithTimeInterval:0.5
-                                                          repeats:YES
-                                                            block:^(NSTimer* t) {
-                                                              // wait for delivery before checking dismiss, same logic as main thread
-                                                              if (!rust_notification_is_delivered(notificationIdData.bytes)) {
-                                                                  if (!rust_notification_is_done(notificationIdData.bytes) && -[pollStarted timeIntervalSinceNow] > kDeliveryTimeoutSecs) {
-                                                                      [t invalidate];
-                                                                      resolveAutoDismiss(notificationIdData.bytes);
-                                                                  }
-                                                                  return;
-                                                              }
-                                                              if (wasAutoDismissed()) {
-                                                                  [t invalidate];
-                                                                  resolveAutoDismiss(notificationIdData.bytes);
-                                                              }
-                                                            }];
-            [[NSRunLoop mainRunLoop] addTimer:dismissPoll forMode:NSDefaultRunLoopMode];
+            // callbacks come in on main thread, poll there (#86)
+            // copy UUID to NSData so the entry owns the lifetime, not the Rust stack
+            watchDismiss(identifierString, [NSData dataWithBytes:notificationId length:16]);
             // Blocks until rust_notification_auto_dismissed / rust_notification_activated /
             // rust_notification_dismissed signals the Condvar.
             rust_wait_for_notification(notificationId);
+            // queued after watchDismiss's block on the same serial queue, so the entry exists by then
             dispatch_async(dispatch_get_main_queue(), ^{
-              [dismissPoll invalidate];
+              [gPendingDismiss removeObjectForKey:identifierString];
             });
         }
     }
